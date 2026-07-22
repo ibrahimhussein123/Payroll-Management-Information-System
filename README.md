@@ -14,3 +14,12 @@ and documentation of the system.
 
 Modern AI tools were used throughout the development process to assist
 with coding, interface design, documentation, and productivity.
+
+
+My contributions included:
+
+• Participating in system analysis and planning
+• Contributing to the business process design
+• Assisting with dashboard development
+• Participating in database design
+• Supporting testing and documentation
