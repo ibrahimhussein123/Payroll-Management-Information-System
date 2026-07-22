@@ -1,0 +1,1828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sheba PMIS — Payroll Command Center</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --charcoal:#171314;
+  --panel:#1e1a1b;
+  --panel-2:#252021;
+  --line:rgba(247,245,239,.10);
+  --line-lime:rgba(191,213,43,.22);
+  --ivory:#f7f5ef;
+  --muted:rgba(247,245,239,.55);
+  --muted-2:rgba(247,245,239,.35);
+  --lime:#bfd52b;
+  --lime-dim:rgba(191,213,43,.14);
+  --amber:#e8b13a;
+  --rose:#e0685f;
+  --sky:#6fb3c9;
+  --sidebar-w:248px;
+  --header-h:66px;
+  --r:10px;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --display:'Space Grotesk',system-ui,sans-serif;
+  --body:'Inter',system-ui,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--charcoal);color:var(--ivory);font-family:var(--body);-webkit-font-smoothing:antialiased}
+body{min-height:100vh;overflow-x:hidden}
+button{font-family:inherit;cursor:pointer}
+input,select{font-family:inherit}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(191,213,43,.2);border-radius:6px}
+::-webkit-scrollbar-thumb:hover{background:rgba(191,213,43,.4)}
+:focus-visible{outline:2px solid var(--lime);outline-offset:2px;border-radius:4px}
+
+/* ============ SHELL ============ */
+.app-header{
+  position:fixed;top:0;left:0;right:0;height:var(--header-h);z-index:900;
+  background:rgba(23,19,20,.92);backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 20px;
+}
+.brand{display:flex;align-items:center;gap:11px;min-width:0}
+.brand-mark{width:34px;height:34px;flex:0 0 34px}
+.brand-name{font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:-.01em;line-height:1}
+.brand-sub{font-family:var(--mono);font-size:9.5px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-top:3px}
+.cycle-chip{
+  display:flex;align-items:center;gap:8px;padding:6px 11px;border:1px solid var(--line-lime);
+  border-radius:100px;background:var(--lime-dim);font-family:var(--mono);font-size:10.5px;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--lime);white-space:nowrap
+}
+.pulse-dot{width:6px;height:6px;border-radius:50%;background:var(--lime);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(191,213,43,.5)}50%{opacity:.6;box-shadow:0 0 0 5px rgba(191,213,43,0)}}
+.header-right{display:flex;align-items:center;gap:10px}
+.role-select{
+  background:var(--panel-2);border:1px solid var(--line);color:var(--ivory);
+  padding:8px 11px;border-radius:8px;font-size:12.5px;font-weight:500;min-width:150px
+}
+.role-select:hover{border-color:var(--line-lime)}
+.role-tag{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:none}
+@media(min-width:1100px){.role-tag{display:block}}
+.menu-btn{display:none;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px;color:var(--ivory)}
+
+.sidebar{
+  position:fixed;top:var(--header-h);bottom:0;left:0;width:var(--sidebar-w);z-index:850;
+  background:var(--panel);border-right:1px solid var(--line);
+  padding:16px 12px;overflow-y:auto;transition:transform .25s ease
+}
+.nav-label{font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted-2);padding:0 10px 9px}
+.nav-item{
+  width:100%;display:flex;align-items:center;gap:11px;padding:10px 11px;margin-bottom:3px;
+  background:transparent;border:0;border-radius:8px;color:var(--muted);
+  font-size:13px;font-weight:500;text-align:left;transition:background .16s,color .16s
+}
+.nav-item svg{flex:0 0 17px;opacity:.75}
+.nav-item:hover{background:rgba(247,245,239,.05);color:var(--ivory)}
+.nav-item.on{background:var(--lime-dim);color:var(--lime)}
+.nav-item.on svg{opacity:1}
+.nav-index{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--muted-2)}
+.nav-item.on .nav-index{color:rgba(191,213,43,.7)}
+.sidebar-foot{margin-top:20px;padding:12px 11px;border-top:1px solid var(--line)}
+.sidebar-foot dt{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-2);margin-bottom:3px}
+.sidebar-foot dd{font-size:12px;color:var(--ivory);margin-bottom:11px;font-weight:500}
+
+main{margin-left:var(--sidebar-w);margin-top:var(--header-h);padding:26px 26px 90px}
+.view{display:none}
+.view.on{display:block;animation:rise .32s cubic-bezier(.2,.7,.3,1)}
+@keyframes rise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+.view-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:20px}
+.eyebrow{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--lime);margin-bottom:7px}
+h1{font-family:var(--display);font-size:27px;font-weight:600;letter-spacing:-.02em;line-height:1.1}
+.lede{font-size:13px;color:var(--muted);margin-top:7px;max-width:62ch;line-height:1.55}
+
+/* ============ PANELS ============ */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.panel-head{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.panel-title{font-family:var(--display);font-size:14px;font-weight:600;letter-spacing:-.01em}
+.panel-note{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.panel-body{padding:18px}
+
+.grid{display:grid;gap:14px}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.span2{grid-column:span 2}
+@media(max-width:1240px){.g4{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:1080px){.g2,.g3{grid-template-columns:1fr}.span2{grid-column:span 1}}
+@media(max-width:640px){.g4{grid-template-columns:1fr}}
+
+/* ============ KPI ============ */
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;position:relative;overflow:hidden;transition:border-color .18s,transform .18s}
+.kpi:hover{border-color:var(--line-lime);transform:translateY(-2px)}
+.kpi-label{font-family:var(--mono);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);line-height:1.5}
+.kpi-value{font-family:var(--display);font-size:27px;font-weight:600;letter-spacing:-.025em;margin:9px 0 2px;color:var(--lime);font-variant-numeric:tabular-nums}
+.kpi-unit{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:5px;font-weight:400}
+.kpi-foot{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-top:10px}
+.kpi-delta{font-family:var(--mono);font-size:10.5px;font-weight:500}
+.up{color:var(--lime)}.down{color:var(--rose)}.flat{color:var(--muted)}
+.spark{width:82px;height:26px;flex:0 0 82px}
+
+/* ============ FLOW CHART ============ */
+.flow-wrap{padding:6px 0}
+.flow-legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px}
+.leg{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--muted)}
+.leg i{width:9px;height:9px;border-radius:2px;display:block}
+.leg b{color:var(--ivory);font-family:var(--mono);font-size:11.5px;font-weight:500}
+
+/* ============ BRANCH BARS ============ */
+.branch-row{padding:11px 0;border-bottom:1px solid var(--line);cursor:pointer;transition:opacity .16s}
+.branch-row:last-child{border-bottom:0}
+.branch-row:hover{opacity:.82}
+.branch-row.dim{opacity:.32}
+.branch-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:7px}
+.branch-name{font-size:13px;font-weight:500}
+.branch-meta{font-family:var(--mono);font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.bar{height:5px;border-radius:3px;background:rgba(247,245,239,.07);overflow:hidden}
+.bar>span{display:block;height:100%;border-radius:3px;background:var(--lime);transition:width .5s cubic-bezier(.2,.7,.3,1)}
+.bar>span.over{background:var(--rose)}
+.bar>span.warn{background:var(--amber)}
+
+/* ============ INSIGHTS ============ */
+.insight{display:flex;gap:11px;padding:12px 0;border-bottom:1px solid var(--line)}
+.insight:last-child{border-bottom:0;padding-bottom:0}
+.insight-tick{flex:0 0 3px;border-radius:2px;background:var(--lime)}
+.insight-tick.amber{background:var(--amber)}
+.insight-tick.rose{background:var(--rose)}
+.insight-tick.sky{background:var(--sky)}
+.insight h4{font-size:12px;font-weight:600;margin-bottom:4px}
+.insight p{font-size:12.5px;color:var(--muted);line-height:1.55}
+
+/* ============ TABLES ============ */
+.table-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+thead th{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);
+  text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);white-space:nowrap;font-weight:500;background:var(--panel-2)
+}
+tbody td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr{transition:background .14s}
+tbody tr.clickable{cursor:pointer}
+tbody tr.clickable:hover{background:rgba(191,213,43,.06)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.name-cell{font-weight:500;white-space:nowrap}
+.id-cell{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.masked{font-family:var(--mono);color:var(--muted-2);letter-spacing:.06em}
+.empty-row td{text-align:center;color:var(--muted);padding:34px 14px;font-size:12.5px}
+
+.tag{display:inline-block;padding:3px 8px;border-radius:100px;font-family:var(--mono);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;border:1px solid;white-space:nowrap}
+.t-mfg{color:var(--lime);border-color:rgba(191,213,43,.35);background:rgba(191,213,43,.08)}
+.t-sales{color:var(--sky);border-color:rgba(111,179,201,.35);background:rgba(111,179,201,.08)}
+.t-admin{color:var(--ivory);border-color:var(--line);background:rgba(247,245,239,.05)}
+.t-mgr{color:var(--amber);border-color:rgba(232,177,58,.35);background:rgba(232,177,58,.08)}
+.t-exec{color:var(--rose);border-color:rgba(224,104,95,.35);background:rgba(224,104,95,.08)}
+.t-ok{color:var(--lime);border-color:rgba(191,213,43,.35);background:rgba(191,213,43,.08)}
+.t-wait{color:var(--amber);border-color:rgba(232,177,58,.35);background:rgba(232,177,58,.08)}
+.t-no{color:var(--rose);border-color:rgba(224,104,95,.35);background:rgba(224,104,95,.08)}
+
+/* ============ CONTROLS ============ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:9px 15px;border-radius:8px;
+  border:1px solid transparent;font-size:12.5px;font-weight:600;transition:background .16s,border-color .16s,opacity .16s;white-space:nowrap
+}
+.btn:disabled{opacity:.38;cursor:not-allowed}
+.btn-primary{background:var(--lime);color:#12100f}
+.btn-primary:not(:disabled):hover{background:#cde33a}
+.btn-ghost{background:transparent;border-color:var(--line);color:var(--ivory)}
+.btn-ghost:not(:disabled):hover{border-color:var(--line-lime);background:rgba(191,213,43,.06)}
+.btn-ok{background:rgba(191,213,43,.14);border-color:rgba(191,213,43,.4);color:var(--lime)}
+.btn-ok:not(:disabled):hover{background:rgba(191,213,43,.24)}
+.btn-no{background:rgba(224,104,95,.12);border-color:rgba(224,104,95,.38);color:var(--rose)}
+.btn-no:not(:disabled):hover{background:rgba(224,104,95,.22)}
+.btn-sm{padding:6px 10px;font-size:11.5px;border-radius:7px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.input{
+  background:var(--charcoal);border:1px solid var(--line);border-radius:8px;color:var(--ivory);
+  padding:9px 11px;font-size:12.5px;width:100%;transition:border-color .16s
+}
+.input:focus{outline:none;border-color:var(--lime)}
+.input::placeholder{color:var(--muted-2)}
+.err{font-size:11px;color:var(--rose);min-height:14px}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.toolbar .input{width:auto;min-width:190px;flex:1}
+.toolbar select.input{flex:0 0 auto;min-width:160px}
+
+/* ============ WIZARD ============ */
+.stepper{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}
+@media(max-width:980px){.stepper{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:560px){.stepper{grid-template-columns:repeat(2,1fr)}}
+.step{
+  text-align:left;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--charcoal);
+  transition:border-color .16s,background .16s
+}
+.step:hover{border-color:var(--line-lime)}
+.step-n{font-family:var(--mono);font-size:9.5px;color:var(--muted-2);letter-spacing:.1em;display:block;margin-bottom:5px}
+.step-t{font-size:11px;font-weight:500;color:var(--muted);line-height:1.35;display:block}
+.step.done{border-color:rgba(191,213,43,.3);background:rgba(191,213,43,.06)}
+.step.done .step-n,.step.done .step-t{color:rgba(191,213,43,.85)}
+.step.now{border-color:var(--lime);background:rgba(191,213,43,.14)}
+.step.now .step-n{color:var(--lime)}
+.step.now .step-t{color:var(--ivory);font-weight:600}
+.stage{padding:20px;border:1px solid var(--line);border-radius:var(--r);background:var(--charcoal);margin-top:16px}
+.stage h3{font-family:var(--display);font-size:16px;font-weight:600;margin-bottom:7px}
+.stage p{font-size:13px;color:var(--muted);line-height:1.6;max-width:70ch}
+.stage-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center}
+.spinner{width:13px;height:13px;border:2px solid rgba(18,16,15,.3);border-top-color:#12100f;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.checklist{list-style:none;margin-top:14px;display:grid;gap:7px}
+.checklist li{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:var(--muted);line-height:1.5}
+.checklist li b{color:var(--ivory);font-weight:500}
+.check-mark{flex:0 0 15px;height:15px;border-radius:4px;background:rgba(191,213,43,.15);color:var(--lime);display:grid;place-items:center;font-size:9px;margin-top:1px}
+
+/* ============ EXPORT HUB ============ */
+.export-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:11px;transition:border-color .18s}
+.export-card:hover{border-color:var(--line-lime)}
+.export-icon{width:36px;height:36px;border-radius:9px;background:var(--lime-dim);color:var(--lime);display:grid;place-items:center}
+.export-card h3{font-family:var(--display);font-size:14px;font-weight:600}
+.export-card p{font-size:12.5px;color:var(--muted);line-height:1.55;flex:1}
+.export-meta{font-family:var(--mono);font-size:10px;color:var(--muted-2);letter-spacing:.06em}
+
+/* ============ FLYOUT / MODAL ============ */
+.scrim{position:fixed;inset:0;background:rgba(10,8,9,.7);backdrop-filter:blur(3px);z-index:1000;display:none}
+.scrim.on{display:block;animation:fade .2s ease}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.flyout{
+  position:fixed;top:0;right:0;bottom:0;width:min(480px,100%);z-index:1010;
+  background:var(--panel);border-left:1px solid var(--line-lime);
+  transform:translateX(100%);transition:transform .3s cubic-bezier(.2,.7,.3,1);
+  display:flex;flex-direction:column
+}
+.flyout.on{transform:none}
+.flyout-head{padding:18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.flyout-body{padding:18px;overflow-y:auto;flex:1}
+.icon-btn{background:transparent;border:1px solid var(--line);border-radius:7px;color:var(--muted);width:30px;height:30px;display:grid;place-items:center;flex:0 0 30px}
+.icon-btn:hover{color:var(--ivory);border-color:var(--line-lime)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:9px 16px;font-size:12.5px;margin-bottom:20px}
+.kv dt{font-family:var(--mono);font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);padding-top:2px}
+.kv dd{text-align:right;font-weight:500}
+.calc-line{display:flex;justify-content:space-between;gap:14px;padding:8px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.calc-line span:first-child{color:var(--muted)}
+.calc-line span:last-child{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.calc-line.minus span:last-child{color:var(--rose)}
+.calc-line.total{border-bottom:0;border-top:1px solid var(--line-lime);margin-top:6px;padding-top:12px;font-weight:600}
+.calc-line.total span:last-child{color:var(--lime);font-size:15px}
+.formula{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.7;background:var(--charcoal);border:1px solid var(--line);border-radius:8px;padding:11px;margin-bottom:18px;word-break:break-word}
+.sec-label{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--lime);margin:0 0 10px}
+
+.modal{
+  position:fixed;z-index:1020;top:50%;left:50%;transform:translate(-50%,-46%) scale(.97);opacity:0;pointer-events:none;
+  width:min(560px,calc(100% - 32px));max-height:88vh;overflow-y:auto;
+  background:var(--panel);border:1px solid var(--line-lime);border-radius:14px;transition:opacity .22s,transform .22s
+}
+.modal.on{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto}
+.modal-head{padding:18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:14px}
+.modal-body{padding:18px}
+.modal-foot{padding:16px 18px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end}
+
+/* payslip */
+.slip{background:var(--charcoal);border:1px solid var(--line);border-radius:10px;padding:18px}
+.slip-head{display:flex;justify-content:space-between;gap:14px;padding-bottom:14px;border-bottom:1px dashed var(--line);margin-bottom:14px}
+.slip-head h4{font-family:var(--display);font-size:15px;font-weight:600}
+.slip-head p{font-size:11.5px;color:var(--muted);margin-top:3px}
+.slip-ref{font-family:var(--mono);font-size:10px;color:var(--muted);text-align:right;line-height:1.7}
+
+/* ============ ALERT ============ */
+.alert{display:flex;gap:11px;padding:13px 15px;border-radius:9px;border:1px solid;align-items:flex-start;margin-bottom:16px}
+.alert-warn{border-color:rgba(232,177,58,.4);background:rgba(232,177,58,.08)}
+.alert-warn h4{font-size:12.5px;font-weight:600;color:var(--amber);margin-bottom:3px}
+.alert p{font-size:12.5px;color:var(--muted);line-height:1.55}
+.alert-info{border-color:var(--line-lime);background:rgba(191,213,43,.06)}
+.alert-info h4{font-size:12.5px;font-weight:600;color:var(--lime);margin-bottom:3px}
+
+/* ============ TOAST ============ */
+.toast-stack{position:fixed;right:18px;bottom:18px;z-index:1200;display:flex;flex-direction:column;gap:9px;max-width:min(370px,calc(100vw - 36px))}
+.toast{
+  background:var(--panel-2);border:1px solid var(--line-lime);border-left:3px solid var(--lime);border-radius:9px;
+  padding:12px 14px;animation:toastIn .28s cubic-bezier(.2,.7,.3,1);box-shadow:0 12px 34px rgba(0,0,0,.5)
+}
+.toast.bad{border-color:rgba(224,104,95,.5);border-left-color:var(--rose)}
+@keyframes toastIn{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
+.toast h5{font-size:12.5px;font-weight:600;margin-bottom:3px}
+.toast p{font-size:11.5px;color:var(--muted);line-height:1.5}
+.toast code{font-family:var(--mono);font-size:10px;color:var(--lime);display:block;margin-top:6px;word-break:break-all}
+
+/* ============ MAP DRAWER ============ */
+.fab{
+  position:fixed;right:20px;bottom:20px;z-index:940;display:flex;align-items:center;gap:9px;
+  padding:11px 16px;border-radius:100px;background:var(--lime);color:#12100f;border:0;
+  font-size:12.5px;font-weight:600;box-shadow:0 10px 30px rgba(191,213,43,.22)
+}
+.fab:hover{background:#cde33a}
+.map-drawer{
+  position:fixed;right:0;bottom:0;z-index:1005;width:min(560px,100%);height:min(520px,86vh);
+  background:var(--panel);border:1px solid var(--line-lime);border-radius:14px 0 0 0;
+  transform:translateY(102%);transition:transform .32s cubic-bezier(.2,.7,.3,1);
+  display:flex;flex-direction:column;overflow:hidden
+}
+.map-drawer.on{transform:none}
+.map-stage{flex:1;position:relative;min-height:260px;background:var(--charcoal)}
+#leafletMap{position:absolute;inset:0;background:var(--charcoal)}
+.map-fallback{position:absolute;inset:0;display:none;flex-direction:column;padding:12px 14px 4px}
+.map-fallback.on{display:flex}
+.map-fallback svg{flex:1;width:100%;height:100%}
+.map-note{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted-2);margin-bottom:8px}
+.pin{cursor:pointer}
+.pin circle{transition:r .2s,fill-opacity .2s}
+.pin:hover circle.halo{fill-opacity:.32}
+.pin text{font-family:var(--mono);font-size:9px;fill:var(--muted)}
+.pin.sel text{fill:var(--ivory)}
+.map-loading{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted-2)}
+.map-loading.off{display:none}
+.map-legend{padding:11px 16px;border-top:1px solid var(--line);display:flex;gap:16px;flex-wrap:wrap}
+.map-legend span{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+.map-legend i{width:8px;height:8px;border-radius:50%;display:block}
+.leaflet-container{background:#171314!important;font-family:var(--body)!important}
+.leaflet-popup-content-wrapper{background:var(--panel-2);color:var(--ivory);border-radius:8px;border:1px solid var(--line-lime)}
+.leaflet-popup-tip{background:var(--panel-2)}
+.leaflet-popup-content{margin:11px 13px;font-size:12px}
+.leaflet-popup-content b{font-family:var(--display);font-size:13px}
+.leaflet-popup-content em{font-style:normal;font-family:var(--mono);font-size:10.5px;color:var(--lime);display:block;margin-top:4px}
+.leaflet-control-attribution{background:rgba(23,19,20,.8)!important;color:var(--muted-2)!important;font-size:9px!important}
+.leaflet-control-attribution a{color:var(--muted)!important}
+.leaflet-bar a{background:var(--panel-2)!important;color:var(--ivory)!important;border-color:var(--line)!important}
+
+.filter-banner{
+  display:none;align-items:center;gap:11px;padding:10px 14px;border-radius:9px;
+  background:rgba(191,213,43,.09);border:1px solid var(--line-lime);margin-bottom:18px
+}
+.filter-banner.on{display:flex}
+.filter-banner p{font-size:12.5px;flex:1}
+.filter-banner b{color:var(--lime)}
+
+/* ============ RESPONSIVE ============ */
+@media(max-width:900px){
+  :root{--sidebar-w:0px}
+  .sidebar{transform:translateX(-100%);width:248px;box-shadow:0 0 40px rgba(0,0,0,.5)}
+  .sidebar.open{transform:none}
+  main{margin-left:0;padding:20px 16px 90px}
+  .menu-btn{display:grid;place-items:center}
+  .brand-sub{display:none}
+  h1{font-size:22px}
+}
+@media(max-width:560px){
+  .cycle-chip{display:none}
+  .role-select{min-width:120px;font-size:12px}
+  .map-drawer{border-radius:14px 14px 0 0}
+}
+
+/* ============ PRINT ============ */
+@media print{
+  @page{size:A4 landscape;margin:14mm}
+  html,body{background:#fff!important;color:#111!important}
+  .app-header,.sidebar,.fab,.map-drawer,.scrim,.flyout,.modal,.toast-stack,.toolbar,.stage-actions,.filter-banner,.no-print{display:none!important}
+  main{margin:0!important;padding:0!important}
+  .view{display:none!important}
+  .view.on{display:block!important}
+  .panel,.kpi,.export-card{border:1px solid #ccc!important;background:#fff!important;break-inside:avoid}
+  .panel-head{border-bottom:1px solid #ccc!important}
+  h1,.panel-title,.kpi-value{color:#111!important}
+  .kpi-value{font-size:20px!important}
+  .eyebrow,.panel-note,.kpi-label,.lede{color:#555!important}
+  thead th{background:#f2f2f2!important;color:#333!important;border-bottom:1px solid #999!important}
+  tbody td{border-bottom:1px solid #ddd!important;color:#111!important}
+  .tag{border-color:#999!important;color:#333!important;background:#fff!important}
+  .num{color:#111!important}
+  .print-only{display:block!important}
+  .print-head{margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #111}
+  .print-head h2{font-size:16px;font-weight:700}
+  .print-head p{font-size:10px;color:#555;margin-top:3px}
+}
+.print-only{display:none}
+</style>
+</head>
+<body>
+
+<!-- ================= HEADER ================= -->
+<header class="app-header">
+  <div class="brand">
+    <button class="menu-btn" id="menuBtn" aria-label="Toggle navigation">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <svg class="brand-mark" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+      <circle cx="24" cy="24" r="4.2" fill="#bfd52b"/>
+      <path d="M24 20.5c-1.1-4.6-1.4-8.9-.6-13.4 2.7 3.6 4 7.7 4.3 12.4l-3.7 1z" fill="#bfd52b"/>
+      <path d="M27 22.6c3.6-3 7.3-5.2 11.6-6.6-1.9 4.1-4.9 7.2-8.9 9.7l-2.7-3.1z" fill="#bfd52b"/>
+      <path d="M26.6 27c3.4 3.2 5.9 6.6 7.8 10.7-4.2-1.5-7.4-4.2-10.2-7.9l2.4-2.8z" fill="#bfd52b"/>
+      <path d="M21.3 26.9c-2.9 3.7-6 6.4-10.1 8.1 1.6-4.2 4.1-7.6 7.5-10.7l2.6 2.6z" fill="#bfd52b"/>
+      <path d="M20.9 21.9c-4.3-2-7.7-4.4-10.9-7.7 4.4.5 8.2 2.2 11.9 4.9l-1 2.8z" fill="#bfd52b"/>
+    </svg>
+    <div>
+      <div class="brand-name">Sheba</div>
+      <div class="brand-sub">Payroll MIS</div>
+    </div>
+  </div>
+
+  <div class="cycle-chip"><span class="pulse-dot"></span><span id="cycleChip">June 2026 cycle · open</span></div>
+
+  <div class="header-right">
+    <span class="role-tag">Signed in as</span>
+    <select class="role-select" id="roleSelect" aria-label="Active role">
+      <option value="hr">HR Officer</option>
+      <option value="manager">Branch Manager</option>
+      <option value="finance">Finance Officer</option>
+      <option value="employee">Employee</option>
+    </select>
+  </div>
+</header>
+
+<!-- ================= SIDEBAR ================= -->
+<nav class="sidebar" id="sidebar">
+  <p class="nav-label">Workspaces</p>
+  <button class="nav-item on" data-view="command">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+    Command Center<span class="nav-index">01</span>
+  </button>
+  <button class="nav-item" data-view="directory">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
+    Employee Directory<span class="nav-index">02</span>
+  </button>
+  <button class="nav-item" data-view="attendance">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    Attendance Desk<span class="nav-index">03</span>
+  </button>
+  <button class="nav-item" data-view="engine">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 1.9"/></svg>
+    Payroll Engine<span class="nav-index">04</span>
+  </button>
+  <button class="nav-item" data-view="exports">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 21H3V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/></svg>
+    Bank &amp; Exports<span class="nav-index">05</span>
+  </button>
+
+  <div class="sidebar-foot">
+    <dl>
+      <dt>Cycle status</dt><dd id="sideStatus">Open — inputs editable</dd>
+      <dt>Headcount</dt><dd id="sideCount">20 active</dd>
+      <dt>Pending approvals</dt><dd id="sidePending">0 items</dd>
+    </dl>
+  </div>
+</nav>
+
+<main>
+<!-- ============================================================ 01 COMMAND CENTER -->
+<section class="view on" id="view-command">
+  <div class="print-only print-head">
+    <h2>Sheba PMIS — Executive Payroll Summary</h2>
+    <p id="printMetaCmd"></p>
+  </div>
+
+  <div class="view-head no-print">
+    <div>
+      <p class="eyebrow">Workspace 01</p>
+      <h1>Executive command center</h1>
+      <p class="lede">Live financial position for the June 2026 cycle across the Mahalla factory and the three retail branches. Every figure recalculates from the same employee ledger the payroll engine uses.</p>
+    </div>
+    <button class="btn btn-ghost" id="printCmd">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Print ledger
+    </button>
+  </div>
+
+  <div class="filter-banner" id="branchBanner">
+    <p>Filtered to <b id="branchBannerName"></b> — all panels below show this site only.</p>
+    <button class="btn btn-ghost btn-sm" id="clearBranch">Clear filter</button>
+  </div>
+
+  <div class="grid g4" id="kpiGrid" style="margin-bottom:14px"></div>
+
+  <div class="grid g2" style="margin-bottom:14px">
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Gross-to-net allocation</div>
+        </div>
+        <span class="panel-note">EGP · current cycle</span>
+      </div>
+      <div class="panel-body">
+        <div class="flow-wrap" id="flowChart"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">Branch budget consumption</div>
+        <span class="panel-note">Click a site to isolate</span>
+      </div>
+      <div class="panel-body" id="branchMatrix"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title">Executive insight desk</div>
+      <span class="panel-note">Generated from current state</span>
+    </div>
+    <div class="panel-body" id="insightDesk"></div>
+  </div>
+
+  <div class="panel print-only" style="margin-top:14px">
+    <div class="panel-head"><div class="panel-title">Net pay register</div></div>
+    <div class="table-scroll"><table><thead><tr><th>ID</th><th>Name</th><th>Segment</th><th>Site</th><th class="num">Gross</th><th class="num">Deductions</th><th class="num">Net</th></tr></thead><tbody id="printLedger"></tbody></table></div>
+  </div>
+</section>
+
+<!-- ============================================================ 02 DIRECTORY -->
+<section class="view" id="view-directory">
+  <div class="print-only print-head"><h2>Sheba PMIS — Employee Register</h2><p id="printMetaDir"></p></div>
+  <div class="view-head no-print">
+    <div>
+      <p class="eyebrow">Workspace 02</p>
+      <h1>Employee directory</h1>
+      <p class="lede">Twenty active records mapped to the system ERD. Select any row to open the compensation breakdown and payslip preview.</p>
+    </div>
+    <button class="btn btn-primary" id="addEmpBtn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add employee
+    </button>
+  </div>
+
+  <div class="alert alert-info no-print" id="roleNotice" style="display:none">
+    <div><h4 id="roleNoticeTitle"></h4><p id="roleNoticeText"></p></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div class="toolbar no-print">
+        <input class="input" id="empSearch" placeholder="Search name or employee ID" aria-label="Search employees">
+        <select class="input" id="empSegment" aria-label="Filter by segment">
+          <option value="">All segments</option>
+          <option>Manufacturing</option><option>Sales</option><option>Administrative</option><option>Manager</option><option>Executive</option>
+        </select>
+        <select class="input" id="empBranch" aria-label="Filter by site">
+          <option value="">All sites</option>
+          <option>Main Factory</option><option>Retail Branch 1</option><option>Retail Branch 2</option><option>Retail Branch 3</option>
+        </select>
+      </div>
+      <span class="panel-note" id="dirCount"></span>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Employee ID</th><th>Full name</th><th>Segment</th><th>Site</th><th class="num">Basic salary</th><th>Bank account</th><th class="num">Net this cycle</th></tr></thead>
+        <tbody id="dirBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 03 ATTENDANCE -->
+<section class="view" id="view-attendance">
+  <div class="print-only print-head"><h2>Sheba PMIS — Attendance &amp; Approval Ledger</h2><p id="printMetaAtt"></p></div>
+  <div class="view-head no-print">
+    <div>
+      <p class="eyebrow">Workspace 03</p>
+      <h1>Attendance desk &amp; approvals</h1>
+      <p class="lede">Verified attendance feeds the payroll engine directly. Approving an overtime or bonus request writes its value into the employee's compensation for this cycle.</p>
+    </div>
+  </div>
+
+  <div class="alert alert-warn no-print" id="policyAlert" style="display:none">
+    <div>
+      <h4>Policy violation — bonus cut-off</h4>
+      <p id="policyAlertText"></p>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:14px">
+    <div class="panel-head">
+      <div class="panel-title">Approval gateway</div>
+      <span class="panel-note" id="gatewayNote"></span>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Ref</th><th>Employee</th><th>Request</th><th class="num">Value</th><th>Submitted</th><th>Status</th><th class="no-print">Action</th></tr></thead>
+        <tbody id="requestBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title">Attendance ledger</div>
+      <div class="toolbar no-print">
+        <select class="input" id="attFilter" aria-label="Filter attendance">
+          <option value="">All records</option>
+          <option>Present</option><option>Absent</option><option>Annual Leave</option><option>Sick Leave</option><option>Late Arrival</option><option>Early Departure</option>
+        </select>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Date</th><th>Employee</th><th>Site</th><th>Record</th><th class="num">Hours logged</th><th>Payroll effect</th></tr></thead>
+        <tbody id="attBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 04 ENGINE -->
+<section class="view" id="view-engine">
+  <div class="print-only print-head"><h2>Sheba PMIS — Payroll Calculation Register</h2><p id="printMetaEng"></p></div>
+  <div class="view-head no-print">
+    <div>
+      <p class="eyebrow">Workspace 04</p>
+      <h1>Payroll engine</h1>
+      <p class="lede">Fourteen chronological phases from record updates through cycle lock. The calculation fires at phase 7 and freezes the ledger at phase 14.</p>
+    </div>
+    <span class="panel-note" id="engineStatus"></span>
+  </div>
+
+  <div class="panel" style="margin-bottom:14px">
+    <div class="panel-head">
+      <div class="panel-title">Process stepper</div>
+      <span class="panel-note" id="stepCounter"></span>
+    </div>
+    <div class="panel-body">
+      <div class="stepper" id="stepper"></div>
+      <div class="stage" id="stage"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title">Calculation register</div>
+      <span class="panel-note" id="registerNote">Awaiting computation</span>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Employee</th><th>Segment</th><th class="num">Basic</th><th class="num">Overtime</th><th class="num">Bonuses</th><th class="num">Commission</th><th class="num">Tax &amp; ins.</th><th class="num">Advances</th><th class="num">Net</th></tr></thead>
+        <tbody id="registerBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 05 EXPORTS -->
+<section class="view" id="view-exports">
+  <div class="view-head">
+    <div>
+      <p class="eyebrow">Workspace 05</p>
+      <h1>Bank files &amp; regulatory exports</h1>
+      <p class="lede">Files unlock once the payroll register has been computed. Each export produces a verification hash for the banking compliance log.</p>
+    </div>
+  </div>
+
+  <div class="alert alert-warn" id="exportLock" style="display:none">
+    <div><h4>Computation required</h4><p>Run the calculation at phase 7 of the payroll engine before generating bank files.</p></div>
+  </div>
+
+  <div class="grid g3" style="margin-bottom:14px">
+    <div class="export-card">
+      <div class="export-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+      <h3>Bank wire transfer file</h3>
+      <p>Fixed-width payment instruction set for the corporate bank portal, one row per beneficiary account.</p>
+      <span class="export-meta" id="wireMeta">.txt · 20 records</span>
+      <button class="btn btn-primary" data-export="wire">Download transfer file</button>
+    </div>
+    <div class="export-card">
+      <div class="export-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg></div>
+      <h3>Master payroll spreadsheet</h3>
+      <p>Cross-tab summary by segment and site with gross, deduction and net columns for finance reconciliation.</p>
+      <span class="export-meta" id="sheetMeta">.xlsx · 5 sheets</span>
+      <button class="btn btn-primary" data-export="sheet">Export spreadsheet</button>
+    </div>
+    <div class="export-card">
+      <div class="export-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></div>
+      <h3>Employee payslips</h3>
+      <p>Individually addressed payslips with the full earnings and deduction breakdown for distribution.</p>
+      <span class="export-meta" id="slipMeta">.pdf · 20 documents</span>
+      <button class="btn btn-primary" data-export="slips">Print payslip batch</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title">Export activity log</div>
+      <span class="panel-note">Retained for audit</span>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Timestamp</th><th>Artifact</th><th class="num">Records</th><th>Raised by</th><th>Verification hash</th></tr></thead>
+        <tbody id="exportLog"><tr class="empty-row"><td colspan="5">No exports generated in this cycle yet.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- ================= FLYOUT ================= -->
+<div class="scrim" id="scrim"></div>
+<aside class="flyout" id="flyout" role="dialog" aria-modal="true" aria-label="Employee detail">
+  <div class="flyout-head">
+    <div>
+      <p class="eyebrow" id="flyEyebrow"></p>
+      <h2 style="font-family:var(--display);font-size:19px;font-weight:600" id="flyName"></h2>
+    </div>
+    <button class="icon-btn" id="flyClose" aria-label="Close panel">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="flyout-body" id="flyBody"></div>
+</aside>
+
+<!-- ================= ADD EMPLOYEE MODAL ================= -->
+<div class="modal" id="addModal" role="dialog" aria-modal="true" aria-label="Add employee">
+  <div class="modal-head">
+    <div style="font-family:var(--display);font-size:16px;font-weight:600">Add employee record</div>
+    <button class="icon-btn" data-close-modal="addModal" aria-label="Close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  </div>
+  <div class="modal-body">
+    <div class="grid g2">
+      <div class="field"><label for="f-name">Full name</label><input class="input" id="f-name" placeholder="e.g. Mona Adel Fahmy"><span class="err" id="e-name"></span></div>
+      <div class="field"><label for="f-type">Employee type</label>
+        <select class="input" id="f-type"><option value="">Select segment</option><option>Manufacturing</option><option>Sales</option><option>Administrative</option><option>Manager</option><option>Executive</option></select>
+        <span class="err" id="e-type"></span></div>
+      <div class="field"><label for="f-branch">Site</label>
+        <select class="input" id="f-branch"><option value="">Select site</option><option>Main Factory</option><option>Retail Branch 1</option><option>Retail Branch 2</option><option>Retail Branch 3</option></select>
+        <span class="err" id="e-branch"></span></div>
+      <div class="field"><label for="f-basic">Basic salary (EGP)</label><input class="input" id="f-basic" type="number" min="0" step="100" placeholder="5000"><span class="err" id="e-basic"></span></div>
+      <div class="field"><label for="f-bank">Bank account</label><input class="input" id="f-bank" placeholder="EG38 0019 0005 0000 0000 2631 8"><span class="err" id="e-bank"></span></div>
+      <div class="field"><label for="f-role">Position title</label><input class="input" id="f-role" placeholder="e.g. Sewing Operator"><span class="err" id="e-role"></span></div>
+    </div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-ghost" data-close-modal="addModal">Cancel</button>
+    <button class="btn btn-primary" id="saveEmp">Save record</button>
+  </div>
+</div>
+
+<!-- ================= PAYSLIP MODAL ================= -->
+<div class="modal" id="slipModal" role="dialog" aria-modal="true" aria-label="Payslip">
+  <div class="modal-head">
+    <div style="font-family:var(--display);font-size:16px;font-weight:600">Payslip preview</div>
+    <button class="icon-btn" data-close-modal="slipModal" aria-label="Close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  </div>
+  <div class="modal-body" id="slipBody"></div>
+  <div class="modal-foot"><button class="btn btn-ghost" data-close-modal="slipModal">Close</button></div>
+</div>
+
+<!-- ================= MAP ================= -->
+<button class="fab" id="mapFab">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+  Location intelligence
+</button>
+<div class="map-drawer" id="mapDrawer">
+  <div class="flyout-head">
+    <div>
+      <p class="eyebrow">Site network</p>
+      <h2 style="font-family:var(--display);font-size:16px;font-weight:600">Four operating sites</h2>
+    </div>
+    <button class="icon-btn" id="mapClose" aria-label="Close map"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  </div>
+  <div class="map-stage">
+    <div id="leafletMap"></div>
+    <div class="map-fallback" id="mapFallback">
+      <p class="map-note">Schematic view — live tiles unavailable</p>
+      <svg viewBox="0 0 480 300" id="fallbackSvg" role="img" aria-label="Sheba site network across northern Egypt"></svg>
+    </div>
+    <div class="map-loading" id="mapLoading">Loading site network…</div>
+  </div>
+  <div class="map-legend">
+    <span><i style="background:#bfd52b"></i>Within budget</span>
+    <span><i style="background:#e8b13a"></i>Approaching cap</span>
+    <span><i style="background:#e0685f"></i>Over budget</span>
+  </div>
+</div>
+
+<div class="toast-stack" id="toasts"></div>
+
+<script>
+'use strict';
+/* ============================================================
+   SHEBA PMIS — reactive state engine
+   ============================================================ */
+
+const CYCLE = { label:'June 2026', processingDate:'2026-06-25', bonusCutoffDays:5 };
+const HOURS_BASE = 160, OT_MULT = 1.5;
+
+const POLICY = {
+  Manufacturing:{ tax:0.12, attendanceBonus:250, performanceBonus:350, overtime:true, commission:false },
+  Sales:{ tax:0.12, performanceBonus:300, commissionRate:0.05, overtime:true, commission:true },
+  Administrative:{ tax:0.10, attendanceBonus:200, overtime:true, commission:false },
+  Manager:{ tax:0.15, managementBonus:1500, companyBonus:2000, overtime:false, commission:false },
+  Executive:{ tax:0.20, executiveBonus:5000, overtime:false, commission:false }
+};
+
+const SITES = [
+  { name:'Main Factory',     city:'El Mahalla El Kubra', lat:30.9754, lng:31.1669, budget:118000 },
+  { name:'Retail Branch 1',  city:'Zamalek, Cairo',      lat:30.0614, lng:31.2197, budget:38000 },
+  { name:'Retail Branch 2',  city:'Heliopolis, Cairo',   lat:30.0875, lng:31.3245, budget:36000 },
+  { name:'Retail Branch 3',  city:'Alexandria',          lat:31.2001, lng:29.9187, budget:34000 }
+];
+
+/* ---------- 20-record dataset ---------- */
+const EMPLOYEES = [
+  { id:'SHB-001', name:'Ahmed Hassan Ali',        role:'Sewing Operator',        segment:'Manufacturing', branch:'Main Factory',    basic:5200, bank:'EG38 0019 0005 4471 2210 0031', otHours:12, advances:400, kpiRevenue:0 },
+  { id:'SHB-002', name:'Fatma Sayed Abdelrahman', role:'Cutting Operator',       segment:'Manufacturing', branch:'Main Factory',    basic:4800, bank:'EG38 0019 0005 4471 2210 0048', otHours:8,  advances:0,   kpiRevenue:0 },
+  { id:'SHB-003', name:'Mostafa Kamel Ibrahim',   role:'Ironing Supervisor',     segment:'Manufacturing', branch:'Main Factory',    basic:5600, bank:'EG38 0019 0005 4471 2210 0055', otHours:16, advances:750, kpiRevenue:0 },
+  { id:'SHB-004', name:'Nadia Farouk Zaki',       role:'Packaging Worker',       segment:'Manufacturing', branch:'Main Factory',    basic:4500, bank:'EG38 0019 0005 4471 2210 0062', otHours:6,  advances:0,   kpiRevenue:0 },
+  { id:'SHB-005', name:'Hossam Adel Mahmoud',     role:'Warehouse Assistant',    segment:'Manufacturing', branch:'Main Factory',    basic:5100, bank:'EG38 0019 0005 4471 2210 0079', otHours:20, advances:300, kpiRevenue:0 },
+  { id:'SHB-006', name:'Rania Gamal Shawky',      role:'Quality Inspector',      segment:'Manufacturing', branch:'Main Factory',    basic:4700, bank:'EG38 0019 0005 4471 2210 0086', otHours:10, advances:0,   kpiRevenue:0 },
+  { id:'SHB-007', name:'Sameh Ragab Eissa',       role:'Line Technician',        segment:'Manufacturing', branch:'Main Factory',    basic:5300, bank:'EG38 0019 0005 4471 2210 0093', otHours:14, advances:500, kpiRevenue:0 },
+  { id:'SHB-008', name:'Mariam Nabil Fouad',      role:'Senior Sales Rep',       segment:'Sales',         branch:'Retail Branch 1', basic:6000, bank:'EG38 0019 0005 4471 2210 0107', otHours:4,  advances:0,   kpiRevenue:482000 },
+  { id:'SHB-009', name:'Karim Wael Sobhy',        role:'Sales Associate',        segment:'Sales',         branch:'Retail Branch 1', basic:5800, bank:'EG38 0019 0005 4471 2210 0114', otHours:6,  advances:600, kpiRevenue:394000 },
+  { id:'SHB-010', name:'Salma Tarek Hegazy',      role:'Senior Sales Rep',       segment:'Sales',         branch:'Retail Branch 2', basic:6200, bank:'EG38 0019 0005 4471 2210 0121', otHours:5,  advances:0,   kpiRevenue:613000 },
+  { id:'SHB-011', name:'Youssef Ashraf Selim',    role:'Cashier',                segment:'Sales',         branch:'Retail Branch 2', basic:5900, bank:'EG38 0019 0005 4471 2210 0138', otHours:8,  advances:350, kpiRevenue:548000 },
+  { id:'SHB-012', name:'Dina Magdy Halim',        role:'Sales Associate',        segment:'Sales',         branch:'Retail Branch 3', basic:5700, bank:'EG38 0019 0005 4471 2210 0145', otHours:3,  advances:0,   kpiRevenue:331000 },
+  { id:'SHB-013', name:'Tamer Sherif Lotfy',      role:'Cashier',                segment:'Sales',         branch:'Retail Branch 3', basic:6100, bank:'EG38 0019 0005 4471 2210 0152', otHours:7,  advances:900, kpiRevenue:417000 },
+  { id:'SHB-014', name:'Heba Mounir Rizk',        role:'Payroll Officer',        segment:'Administrative',branch:'Main Factory',    basic:6500, bank:'EG38 0019 0005 4471 2210 0169', otHours:9,  advances:0,   kpiRevenue:0 },
+  { id:'SHB-015', name:'Amr Zakaria Nour',        role:'Accountant',             segment:'Administrative',branch:'Main Factory',    basic:7000, bank:'EG38 0019 0005 4471 2210 0176', otHours:5,  advances:400, kpiRevenue:0 },
+  { id:'SHB-016', name:'Yara Hisham Abdo',        role:'Administrative Assistant',segment:'Administrative',branch:'Retail Branch 1',basic:6300, bank:'EG38 0019 0005 4471 2210 0183', otHours:7,  advances:0,   kpiRevenue:0 },
+  { id:'SHB-017', name:'Laila Osman Badr',        role:'Production Manager',     segment:'Manager',       branch:'Main Factory',    basic:14000,bank:'EG38 0019 0005 4471 2210 0190', otHours:0,  advances:0,   kpiRevenue:0 },
+  { id:'SHB-018', name:'Ziad Anwar Mansour',      role:'Branch Manager',         segment:'Manager',       branch:'Retail Branch 2', basic:12500,bank:'EG38 0019 0005 4471 2210 0204', otHours:0,  advances:1200,kpiRevenue:0 },
+  { id:'SHB-019', name:'Magdy Refaat Halim',      role:'General Manager',        segment:'Executive',     branch:'Main Factory',    basic:26000,bank:'EG38 0019 0005 4471 2210 0211', otHours:0,  advances:0,   kpiRevenue:0 },
+  { id:'SHB-020', name:'Iman Sadek Wahba',        role:'Operations Director',    segment:'Executive',     branch:'Main Factory',    basic:23000,bank:'EG38 0019 0005 4471 2210 0228', otHours:0,  advances:0,   kpiRevenue:0 }
+];
+
+/* ---------- attendance ledger ---------- */
+const ATTENDANCE = [
+  { date:'2026-06-01', emp:'SHB-001', type:'Present',         hours:8,   effect:'Full day credited' },
+  { date:'2026-06-01', emp:'SHB-008', type:'Present',         hours:8,   effect:'Full day credited' },
+  { date:'2026-06-02', emp:'SHB-003', type:'Late Arrival',    hours:6.5, effect:'1.5h lateness logged' },
+  { date:'2026-06-03', emp:'SHB-005', type:'Present',         hours:8,   effect:'Full day credited' },
+  { date:'2026-06-04', emp:'SHB-004', type:'Annual Leave',    hours:0,   effect:'Paid — no deduction' },
+  { date:'2026-06-07', emp:'SHB-011', type:'Sick Leave',      hours:0,   effect:'Paid per company policy' },
+  { date:'2026-06-08', emp:'SHB-002', type:'Present',         hours:8,   effect:'Full day credited' },
+  { date:'2026-06-09', emp:'SHB-013', type:'Absent',          hours:0,   effect:'Unapproved — deduction flagged' },
+  { date:'2026-06-10', emp:'SHB-006', type:'Early Departure', hours:6,   effect:'2h shortfall logged' },
+  { date:'2026-06-11', emp:'SHB-016', type:'Present',         hours:8,   effect:'Full day credited' },
+  { date:'2026-06-14', emp:'SHB-007', type:'Present',         hours:8,   effect:'Full day credited' },
+  { date:'2026-06-15', emp:'SHB-010', type:'Annual Leave',    hours:0,   effect:'Paid — no deduction' },
+  { date:'2026-06-16', emp:'SHB-014', type:'Present',         hours:8,   effect:'Full day credited' },
+  { date:'2026-06-17', emp:'SHB-009', type:'Late Arrival',    hours:7,   effect:'1h lateness logged' },
+  { date:'2026-06-18', emp:'SHB-012', type:'Present',         hours:8,   effect:'Full day credited' }
+];
+
+/* ---------- pending requests ---------- */
+const REQUESTS = [
+  { ref:'OT-4411',  emp:'SHB-005', kind:'overtime', label:'Overtime — 6h backlog shift', value:6,    submitted:'2026-06-12', status:'pending' },
+  { ref:'OT-4412',  emp:'SHB-001', kind:'overtime', label:'Overtime — 4h weekend run',   value:4,    submitted:'2026-06-14', status:'pending' },
+  { ref:'BON-2207', emp:'SHB-010', kind:'bonus',    label:'Performance bonus — Branch 2 target', value:1200, submitted:'2026-06-13', status:'pending' },
+  { ref:'BON-2208', emp:'SHB-003', kind:'bonus',    label:'Employee of the month',       value:800,  submitted:'2026-06-22', status:'pending' },
+  { ref:'OT-4413',  emp:'SHB-016', kind:'overtime', label:'Overtime — 3h stocktake',     value:3,    submitted:'2026-06-16', status:'pending' },
+  { ref:'BON-2209', emp:'SHB-007', kind:'bonus',    label:'Seasonal bonus',              value:600,  submitted:'2026-06-24', status:'pending' }
+];
+
+const STEPS = [
+  ['Update records','Reconcile new hires, exits and salary changes against the employee master file before any input is imported.'],
+  ['Import attendance','Pull the month\'s attendance and leave records from the factory and branch terminals into the cycle.'],
+  ['Manager verify','Branch and production managers confirm the imported attendance matches what they observed on site.'],
+  ['Approve overtime','Every overtime hour must carry a manager approval before it can be paid at the 1.5× rate.'],
+  ['Enter bonuses','Managers submit performance, attendance and seasonal bonuses. Submissions inside the cut-off are flagged.'],
+  ['Import sales KPIs','Load branch revenue figures so sales commission can be calculated at 5% of allocated revenue.'],
+  ['Auto-calculate','Run the segment formulas across every active record to produce gross, deductions and net pay.'],
+  ['Finance review','Finance checks the register against budget, prior cycle variance and any flagged exceptions.'],
+  ['Final approval','The finance officer signs off the register, freezing input edits for the remainder of the cycle.'],
+  ['Generate payslips','Produce individual payslips carrying the full earnings and deduction breakdown per employee.'],
+  ['Bank transfer export','Format the approved net pay figures into the bank\'s wire instruction file.'],
+  ['Transfer salaries','Submit the wire file to the corporate bank and record the returned transfer reference.'],
+  ['System reports','Publish payroll, attendance, overtime and bonus reports for management review.'],
+  ['Cycle lock','Archive the cycle. The register becomes read-only and forms the baseline for next month.']
+];
+
+/* ---------- reactive state ---------- */
+const state = {
+  view:'command', role:'hr',
+  search:'', segment:'', branchFilter:'', mapBranch:'',
+  attFilter:'',
+  step:1, computed:false, computing:false, locked:false,
+  employees:EMPLOYEES.map(e=>({...e, bonusExtra:0})),
+  requests:REQUESTS.map(r=>({...r})),
+  attendance:ATTENDANCE.map(a=>({...a})),
+  exports:[]
+};
+
+/* ---------- helpers ---------- */
+const $ = s=>document.querySelector(s);
+const $$ = s=>Array.from(document.querySelectorAll(s));
+const egp = n=>Math.round(n).toLocaleString('en-US');
+const money = n=>egp(n)+' EGP';
+const findEmp = id=>state.employees.find(e=>e.id===id);
+const escapeHtml = s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function hash(seed){
+  let h=2166136261;
+  for(const ch of String(seed)) { h^=ch.charCodeAt(0); h=Math.imul(h,16777619); }
+  let out='';
+  for(let i=0;i<4;i++){ h=Math.imul(h^(h>>>13),1274126177); out+=(h>>>0).toString(16).padStart(8,'0'); }
+  return out.slice(0,40);
+}
+function daysBetween(a,b){ return Math.round((new Date(b)-new Date(a))/86400000); }
+function violatesCutoff(submitted){ return daysBetween(submitted, CYCLE.processingDate) < CYCLE.bonusCutoffDays; }
+
+const segClass = s=>({Manufacturing:'t-mfg',Sales:'t-sales',Administrative:'t-admin',Manager:'t-mgr',Executive:'t-exec'}[s]||'t-admin');
+
+/* ---------- permissions ---------- */
+function perms(){
+  const r=state.role;
+  return {
+    seeBank: r==='hr'||r==='finance',
+    approve: r==='manager'||r==='hr',
+    export:  r==='finance',
+    addEmp:  r==='hr',
+    seeAllPay: r!=='employee'
+  };
+}
+
+/* ============================================================
+   PAYROLL CALCULATOR
+   ============================================================ */
+function compute(emp){
+  const p = POLICY[emp.segment];
+  const hourly = emp.basic / HOURS_BASE;
+  const otEligible = p.overtime;
+  const otHours = otEligible ? emp.otHours : 0;
+  const overtime = otHours * hourly * OT_MULT;
+
+  let commission = 0;
+  if (p.commission) commission = emp.kpiRevenue * p.commissionRate;
+
+  const bonusParts = [];
+  if (p.attendanceBonus) bonusParts.push(['Attendance bonus', p.attendanceBonus]);
+  if (p.performanceBonus) bonusParts.push(['Performance bonus', p.performanceBonus]);
+  if (p.managementBonus) bonusParts.push(['Management bonus', p.managementBonus]);
+  if (p.companyBonus) bonusParts.push(['Company performance bonus', p.companyBonus]);
+  if (p.executiveBonus) bonusParts.push(['Executive bonus', p.executiveBonus]);
+  if (emp.bonusExtra) bonusParts.push(['Approved discretionary bonus', emp.bonusExtra]);
+  const bonuses = bonusParts.reduce((s,[,v])=>s+v,0);
+
+  const tax = emp.basic * p.tax;
+  const advances = emp.advances || 0;
+  const gross = emp.basic + overtime + bonuses + commission;
+  const deductions = tax + advances;
+  const net = gross - deductions;
+
+  return { hourly, otEligible, otHours, overtime, commission, bonusParts, bonuses, tax, taxRate:p.tax, advances, gross, deductions, net };
+}
+
+function scopedEmployees(){
+  const b = state.branchFilter;
+  return b ? state.employees.filter(e=>e.branch===b) : state.employees;
+}
+
+function totals(list){
+  return list.reduce((acc,e)=>{
+    const c = compute(e);
+    acc.net+=c.net; acc.gross+=c.gross; acc.overtime+=c.overtime;
+    acc.deductions+=c.deductions; acc.tax+=c.tax; acc.advances+=c.advances;
+    acc.bonuses+=c.bonuses; acc.commission+=c.commission; acc.otHours+=c.otHours;
+    return acc;
+  },{net:0,gross:0,overtime:0,deductions:0,tax:0,advances:0,bonuses:0,commission:0,otHours:0});
+}
+
+/* ============================================================
+   RENDER — COMMAND CENTER
+   ============================================================ */
+function sparkline(values, color){
+  const w=82,h=26,pad=2;
+  const min=Math.min(...values), max=Math.max(...values), span=(max-min)||1;
+  const pts = values.map((v,i)=>{
+    const x = pad + i*(w-pad*2)/(values.length-1);
+    const y = h-pad - ((v-min)/span)*(h-pad*2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  const area = `M${pts[0]} L${pts.slice(1).join(' L')} L${w-pad},${h} L${pad},${h} Z`;
+  const last = pts[pts.length-1].split(',');
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" aria-hidden="true">
+    <path d="${area}" fill="${color}" opacity=".13"/>
+    <polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${last[0]}" cy="${last[1]}" r="2" fill="${color}"/>
+  </svg>`;
+}
+
+function renderKPIs(){
+  const list = scopedEmployees(), t = totals(list);
+  const cards = [
+    { label:'Monthly payout outflow', value:egp(t.net), unit:'EGP', delta:'+6.4% vs May', dir:'up',
+      trend:[812,798,835,824,861,879,t.net/1000] },
+    { label:'Overtime expenditure', value:egp(t.overtime), unit:'EGP', delta:`${t.otHours.toFixed(0)}h approved`, dir:'flat',
+      trend:[4.1,5.3,4.8,6.2,5.9,7.1,t.overtime/1000] },
+    { label:'Operational headcount', value:String(list.length), unit:'active', delta:state.branchFilter?state.branchFilter:'All four sites', dir:'flat',
+      trend:[17,18,18,19,19,20,list.length] },
+    { label:'Cycle deductions', value:egp(t.deductions), unit:'EGP', delta:`${((t.deductions/t.gross)*100).toFixed(1)}% of gross`, dir:'down',
+      trend:[16.2,16.8,17.1,16.9,17.4,17.8,t.deductions/1000] }
+  ];
+  $('#kpiGrid').innerHTML = cards.map(c=>`
+    <article class="kpi">
+      <p class="kpi-label">${c.label}</p>
+      <p class="kpi-value">${c.value}<span class="kpi-unit">${c.unit}</span></p>
+      <div class="kpi-foot">
+        <span class="kpi-delta ${c.dir}">${escapeHtml(c.delta)}</span>
+        ${sparkline(c.trend, c.dir==='down' ? '#e0685f' : '#bfd52b')}
+      </div>
+    </article>`).join('');
+}
+
+function renderFlow(){
+  const t = totals(scopedEmployees());
+  const segs = [
+    { key:'Net pay',   val:t.net,      color:'#bfd52b' },
+    { key:'Tax & insurance', val:t.tax, color:'#e8b13a' },
+    { key:'Advances & loans', val:t.advances, color:'#e0685f' }
+  ];
+  const total = t.gross || 1;
+  const W=100, H=26, gap=0.5;
+  let x=0;
+  const bars = segs.map(s=>{
+    const w = Math.max((s.val/total)*W - gap, 0);
+    const r = `<rect x="${x.toFixed(2)}" y="0" width="${w.toFixed(2)}" height="${H}" rx="1.2" fill="${s.color}"/>`;
+    x += w + gap;
+    return r;
+  }).join('');
+
+  const buildRows = [
+    ['Basic salaries', t.gross - t.overtime - t.bonuses - t.commission],
+    ['Overtime at 1.5×', t.overtime],
+    ['Bonuses', t.bonuses],
+    ['Sales commission', t.commission]
+  ];
+  let bx=0;
+  const buildTotal = buildRows.reduce((s,[,v])=>s+v,0)||1;
+  const buildColors=['#f7f5ef','#bfd52b','#6fb3c9','#8fa8c9'];
+  const buildBars = buildRows.map(([,v],i)=>{
+    const w = Math.max((v/buildTotal)*W - gap,0);
+    const r = `<rect x="${bx.toFixed(2)}" y="0" width="${w.toFixed(2)}" height="${H}" rx="1.2" fill="${buildColors[i]}" opacity="${i===0?.32:.92}"/>`;
+    bx += w+gap; return r;
+  }).join('');
+
+  $('#flowChart').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px">
+      <span class="panel-note">Gross build-up</span>
+      <span style="font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums">${money(t.gross)}</span>
+    </div>
+    <svg viewBox="0 0 100 26" preserveAspectRatio="none" style="width:100%;height:26px;display:block" aria-hidden="true">${buildBars}</svg>
+    <div class="flow-legend">
+      ${buildRows.map(([k,v],i)=>`<span class="leg"><i style="background:${buildColors[i]};opacity:${i===0?.4:1}"></i>${k} <b>${egp(v)}</b></span>`).join('')}
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin:22px 0 7px">
+      <span class="panel-note">Allocation to net</span>
+      <span style="font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums;color:var(--lime)">${money(t.net)} net</span>
+    </div>
+    <svg viewBox="0 0 100 26" preserveAspectRatio="none" style="width:100%;height:26px;display:block" aria-hidden="true">${bars}</svg>
+    <div class="flow-legend">
+      ${segs.map(s=>`<span class="leg"><i style="background:${s.color}"></i>${s.key} <b>${egp(s.val)}</b></span>`).join('')}
+    </div>`;
+}
+
+function renderBranches(){
+  const rows = SITES.map(site=>{
+    const list = state.employees.filter(e=>e.branch===site.name);
+    const cost = totals(list).net;
+    const pct = (cost/site.budget)*100;
+    const cls = pct>100 ? 'over' : pct>92 ? 'warn' : '';
+    const dim = state.branchFilter && state.branchFilter!==site.name ? 'dim' : '';
+    return `<div class="branch-row ${dim}" data-branch="${site.name}" role="button" tabindex="0">
+      <div class="branch-top">
+        <span class="branch-name">${site.name} <span style="color:var(--muted);font-weight:400">· ${site.city}</span></span>
+        <span class="branch-meta">${egp(cost)} / ${egp(site.budget)} · ${pct.toFixed(0)}%</span>
+      </div>
+      <div class="bar"><span class="${cls}" style="width:${Math.min(pct,100).toFixed(1)}%"></span></div>
+      <div class="branch-meta" style="margin-top:6px">${list.length} employees</div>
+    </div>`;
+  }).join('');
+  $('#branchMatrix').innerHTML = rows;
+
+  $$('#branchMatrix .branch-row').forEach(el=>{
+    const act = ()=>setBranch(state.branchFilter===el.dataset.branch ? '' : el.dataset.branch);
+    el.addEventListener('click', act);
+    el.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); act(); } });
+  });
+}
+
+function renderInsights(){
+  const all = state.employees;
+  const b2 = all.filter(e=>e.branch==='Retail Branch 2' && e.segment==='Sales');
+  const b3 = all.filter(e=>e.branch==='Retail Branch 3' && e.segment==='Sales');
+  const b2rev = b2.reduce((s,e)=>s+e.kpiRevenue,0), b3rev = b3.reduce((s,e)=>s+e.kpiRevenue,0);
+  const gapPct = b3rev ? ((b2rev-b3rev)/b3rev*100) : 0;
+
+  const mfg = all.filter(e=>e.segment==='Manufacturing');
+  const mfgOT = totals(mfg).overtime, allOT = totals(all).overtime;
+  const otShare = allOT ? (mfgOT/allOT*100) : 0;
+
+  const pending = state.requests.filter(r=>r.status==='pending');
+  const violations = pending.filter(r=>r.kind==='bonus' && violatesCutoff(r.submitted));
+
+  const t = totals(all);
+  const overBudget = SITES.filter(s=>totals(all.filter(e=>e.branch===s.name)).net > s.budget);
+
+  const items = [
+    { tone:'', title:'Branch 2 is carrying retail revenue',
+      body:`Heliopolis booked ${egp(b2rev)} EGP against Alexandria's ${egp(b3rev)} EGP — ${gapPct.toFixed(0)}% ahead. At the 5% commission rate that adds ${egp((b2rev-b3rev)*0.05)} EGP of variable pay to Branch 2 alone this cycle.` },
+    { tone:'amber', title:'Overtime is concentrated on the factory floor',
+      body:`Manufacturing accounts for ${otShare.toFixed(0)}% of the ${egp(allOT)} EGP overtime bill, driven by the order backlog on the cutting and packaging lines. Managers and executives remain ineligible, so the exposure sits entirely with hourly-rated staff.` },
+    violations.length
+      ? { tone:'rose', title:`${violations.length} bonus submission${violations.length>1?'s':''} breach the cut-off`,
+          body:`${violations.map(v=>v.ref).join(', ')} arrived inside the five-day window before ${CYCLE.processingDate}. Approving them will push the cycle out of policy — route to the finance officer for an exception before proceeding.` }
+      : { tone:'', title:'All bonus submissions are inside policy',
+          body:`Every pending bonus was filed at least ${CYCLE.bonusCutoffDays} days before the ${CYCLE.processingDate} processing date. No exception routing needed.` },
+    overBudget.length
+      ? { tone:'rose', title:`${overBudget.length} site${overBudget.length>1?'s are':' is'} over budget`,
+          body:`${overBudget.map(s=>s.name).join(' and ')} exceeded the allocated monthly envelope. Net payout across all sites now stands at ${money(t.net)} against ${egp(SITES.reduce((s,x)=>s+x.budget,0))} EGP allocated.` }
+      : { tone:'sky', title:'Every site is inside its envelope',
+          body:`Total net payout of ${money(t.net)} sits under the ${egp(SITES.reduce((s,x)=>s+x.budget,0))} EGP combined allocation, with ${((1-t.net/SITES.reduce((s,x)=>s+x.budget,0))*100).toFixed(1)}% headroom remaining.` },
+    { tone:'sky', title:'Deduction load by segment',
+      body:`Executives carry the heaviest rate at 20% of basic, managers 15%, manufacturing and sales 12%, administrative 10%. Combined tax and insurance for the cycle totals ${money(t.tax)}, with a further ${money(t.advances)} recovered against salary advances.` }
+  ];
+
+  $('#insightDesk').innerHTML = items.map(i=>`
+    <div class="insight">
+      <div class="insight-tick ${i.tone}"></div>
+      <div><h4>${i.title}</h4><p>${i.body}</p></div>
+    </div>`).join('');
+}
+
+function renderPrintLedger(){
+  $('#printLedger').innerHTML = scopedEmployees().map(e=>{
+    const c=compute(e);
+    return `<tr><td class="id-cell">${e.id}</td><td>${e.name}</td><td>${e.segment}</td><td>${e.branch}</td>
+      <td class="num">${egp(c.gross)}</td><td class="num">${egp(c.deductions)}</td><td class="num">${egp(c.net)}</td></tr>`;
+  }).join('');
+  const meta = `${CYCLE.label} cycle · generated ${new Date().toLocaleString('en-GB')} · ${state.branchFilter||'All sites'}`;
+  ['#printMetaCmd','#printMetaDir','#printMetaAtt','#printMetaEng'].forEach(s=>{ const el=$(s); if(el) el.textContent = meta; });
+}
+
+/* ============================================================
+   RENDER — DIRECTORY
+   ============================================================ */
+function renderDirectory(){
+  const p = perms();
+  const q = state.search.trim().toLowerCase();
+  const rows = state.employees.filter(e=>{
+    const matchQ = !q || e.name.toLowerCase().includes(q) || e.id.toLowerCase().includes(q);
+    const matchS = !state.segment || e.segment===state.segment;
+    const matchB = !state.branchFilter || e.branch===state.branchFilter;
+    return matchQ && matchS && matchB;
+  });
+
+  $('#dirCount').textContent = `${rows.length} of ${state.employees.length} records`;
+  $('#addEmpBtn').disabled = !p.addEmp;
+  $('#addEmpBtn').title = p.addEmp ? '' : 'Only the HR Officer can create records';
+
+  const notice = $('#roleNotice');
+  if(!p.seeBank){
+    notice.style.display='flex';
+    $('#roleNoticeTitle').textContent = 'Bank details are masked for this role';
+    $('#roleNoticeText').textContent = state.role==='employee'
+      ? 'Employee access shows your own summary only. Account numbers and colleagues\u2019 net pay are hidden.'
+      : 'Branch Manager access covers attendance and approvals. Full account numbers are restricted to HR and Finance.';
+  } else notice.style.display='none';
+
+  if(!rows.length){
+    $('#dirBody').innerHTML = `<tr class="empty-row"><td colspan="7">No records match that search. Clear the filters to see all twenty employees.</td></tr>`;
+    return;
+  }
+
+  $('#dirBody').innerHTML = rows.map(e=>{
+    const c = compute(e);
+    const bank = p.seeBank ? `<span style="font-family:var(--mono);font-size:11px">${e.bank}</span>` : `<span class="masked">•••• •••• ${e.bank.slice(-4)}</span>`;
+    const net = p.seeAllPay ? `<span class="num">${egp(c.net)}</span>` : `<span class="masked">restricted</span>`;
+    return `<tr class="clickable" data-emp="${e.id}" tabindex="0">
+      <td class="id-cell">${e.id}</td>
+      <td class="name-cell">${e.name}<div style="font-size:11px;color:var(--muted);font-weight:400">${e.role}</div></td>
+      <td><span class="tag ${segClass(e.segment)}">${e.segment}</span></td>
+      <td>${e.branch}</td>
+      <td class="num">${egp(e.basic)}</td>
+      <td>${bank}</td>
+      <td class="num">${net}</td>
+    </tr>`;
+  }).join('');
+
+  $$('#dirBody tr.clickable').forEach(tr=>{
+    const open = ()=>openFlyout(tr.dataset.emp);
+    tr.addEventListener('click', open);
+    tr.addEventListener('keydown', ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); open(); } });
+  });
+}
+
+/* ============================================================
+   RENDER — ATTENDANCE
+   ============================================================ */
+function renderAttendance(){
+  const p = perms();
+  const pending = state.requests.filter(r=>r.status==='pending');
+  const violations = pending.filter(r=>r.kind==='bonus' && violatesCutoff(r.submitted));
+
+  const alertBox = $('#policyAlert');
+  if(violations.length){
+    alertBox.style.display='flex';
+    $('#policyAlertText').textContent = `${violations.map(v=>`${v.ref} (${findEmp(v.emp).name}, submitted ${v.submitted})`).join('; ')} — filed fewer than ${CYCLE.bonusCutoffDays} days before the ${CYCLE.processingDate} processing date. Company policy requires bonus entries at least five days ahead of the run.`;
+  } else alertBox.style.display='none';
+
+  $('#gatewayNote').textContent = `${pending.length} awaiting decision`;
+  $('#sidePending').textContent = `${pending.length} item${pending.length===1?'':'s'}`;
+
+  if(!state.requests.length){
+    $('#requestBody').innerHTML = `<tr class="empty-row"><td colspan="7">No requests raised this cycle.</td></tr>`;
+  } else {
+    $('#requestBody').innerHTML = state.requests.map(r=>{
+      const emp = findEmp(r.emp);
+      const flagged = r.kind==='bonus' && violatesCutoff(r.submitted);
+      const statusTag = r.status==='approved' ? `<span class="tag t-ok">Approved</span>`
+        : r.status==='denied' ? `<span class="tag t-no">Denied</span>`
+        : `<span class="tag t-wait">Pending</span>`;
+      const value = r.kind==='overtime' ? `${r.value} h` : `${egp(r.value)} EGP`;
+      const actions = r.status!=='pending'
+        ? `<span style="color:var(--muted);font-size:11.5px">Recorded</span>`
+        : !p.approve
+          ? `<span style="color:var(--muted);font-size:11.5px">Manager only</span>`
+          : `<div style="display:flex;gap:6px"><button class="btn btn-ok btn-sm" data-approve="${r.ref}">Approve</button><button class="btn btn-no btn-sm" data-deny="${r.ref}">Deny</button></div>`;
+      return `<tr>
+        <td class="id-cell">${r.ref}</td>
+        <td class="name-cell">${emp.name}<div style="font-size:11px;color:var(--muted);font-weight:400">${emp.branch}</div></td>
+        <td>${r.label}${flagged?` <span class="tag t-no" style="margin-left:5px">Cut-off breach</span>`:''}</td>
+        <td class="num">${value}</td>
+        <td class="id-cell">${r.submitted}</td>
+        <td>${statusTag}</td>
+        <td class="no-print">${actions}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  $$('[data-approve]').forEach(b=>b.addEventListener('click',()=>decide(b.dataset.approve,'approved')));
+  $$('[data-deny]').forEach(b=>b.addEventListener('click',()=>decide(b.dataset.deny,'denied')));
+
+  const att = state.attendance.filter(a=>!state.attFilter || a.type===state.attFilter)
+    .filter(a=>!state.branchFilter || findEmp(a.emp).branch===state.branchFilter);
+  if(!att.length){
+    $('#attBody').innerHTML = `<tr class="empty-row"><td colspan="6">No attendance records match this filter.</td></tr>`;
+  } else {
+    $('#attBody').innerHTML = att.map(a=>{
+      const e = findEmp(a.emp);
+      const tone = a.type==='Absent' ? 't-no' : (a.type==='Late Arrival'||a.type==='Early Departure') ? 't-wait' : 't-ok';
+      return `<tr>
+        <td class="id-cell">${a.date}</td>
+        <td class="name-cell">${e.name}</td>
+        <td>${e.branch}</td>
+        <td><span class="tag ${tone}">${a.type}</span></td>
+        <td class="num">${a.hours.toFixed(1)}</td>
+        <td style="color:var(--muted)">${a.effect}</td>
+      </tr>`;
+    }).join('');
+  }
+}
+
+function decide(ref, verdict){
+  const r = state.requests.find(x=>x.ref===ref);
+  if(!r || r.status!=='pending') return;
+  if(state.locked){ toast('Cycle is locked','Approvals cannot be changed after the cycle lock at phase 14.',true); return; }
+
+  r.status = verdict;
+  const emp = findEmp(r.emp);
+
+  if(verdict==='approved'){
+    if(r.kind==='overtime'){
+      if(!POLICY[emp.segment].overtime){
+        r.status='denied';
+        toast('Blocked by policy',`${emp.name} is a ${emp.segment.toLowerCase()} and is not eligible for overtime. The request was rejected automatically.`,true);
+      } else {
+        emp.otHours += r.value;
+        toast('Overtime approved',`${r.value}h added to ${emp.name} at ${money(emp.basic/HOURS_BASE*OT_MULT)} per hour. The register now reflects the new total.`);
+      }
+    } else {
+      emp.bonusExtra += r.value;
+      const warn = violatesCutoff(r.submitted);
+      toast(warn?'Approved with policy exception':'Bonus approved',
+        `${money(r.value)} added to ${emp.name}.${warn?` Filed ${daysBetween(r.submitted,CYCLE.processingDate)} days before the run — logged as a cut-off exception.`:''}`, warn);
+    }
+  } else {
+    toast('Request denied',`${r.ref} for ${emp.name} was rejected and will not affect this cycle's payroll.`);
+  }
+  if(state.computed) state.computed = true; // register re-renders from live data
+  renderAll();
+}
+
+/* ============================================================
+   RENDER — ENGINE
+   ============================================================ */
+function renderStepper(){
+  $('#stepper').innerHTML = STEPS.map((s,i)=>{
+    const n=i+1;
+    const cls = n<state.step ? 'done' : n===state.step ? 'now' : '';
+    return `<button class="step ${cls}" data-step="${n}">
+      <span class="step-n">${String(n).padStart(2,'0')}</span>
+      <span class="step-t">${s[0]}</span>
+    </button>`;
+  }).join('');
+  $$('#stepper .step').forEach(b=>b.addEventListener('click',()=>{ state.step=+b.dataset.step; renderEngine(); }));
+  $('#stepCounter').textContent = `Phase ${state.step} of 14`;
+}
+
+function renderStage(){
+  const [title, body] = STEPS[state.step-1];
+  const isCompute = state.step===7;
+  const isLock = state.step===14;
+
+  let extra = '';
+  if(isCompute){
+    const t = totals(state.employees);
+    extra = state.computed ? `<ul class="checklist">
+        <li><span class="check-mark">✓</span><span><b>${state.employees.length} records</b> evaluated against their segment formula.</span></li>
+        <li><span class="check-mark">✓</span><span>Gross <b>${money(t.gross)}</b> · deductions <b>${money(t.deductions)}</b> · net <b>${money(t.net)}</b>.</span></li>
+        <li><span class="check-mark">✓</span><span>Overtime paid on <b>${t.otHours.toFixed(0)} approved hours</b> at 1.5× the ${HOURS_BASE}-hour base rate.</span></li>
+        <li><span class="check-mark">✓</span><span>Commission of <b>${money(t.commission)}</b> allocated to sales staff at 5% of branch revenue.</span></li>
+      </ul>` : `<ul class="checklist">
+        <li><span class="check-mark">·</span><span>Hourly rate derived as basic ÷ ${HOURS_BASE} hours, overtime paid at ${OT_MULT}×.</span></li>
+        <li><span class="check-mark">·</span><span>Managers and executives are excluded from overtime by policy.</span></li>
+        <li><span class="check-mark">·</span><span>Tax and insurance applied per segment: 10% to 20% of basic salary.</span></li>
+      </ul>`;
+  }
+  if(isLock && state.locked){
+    extra = `<ul class="checklist"><li><span class="check-mark">✓</span><span>Cycle <b>${CYCLE.label}</b> archived. The register is read-only and seeds next month's baseline.</span></li></ul>`;
+  }
+
+  const computeBtn = isCompute ? `
+    <button class="btn btn-primary" id="computeBtn" ${state.computing?'disabled':''}>
+      ${state.computing?'<span class="spinner"></span>Computing register…':(state.computed?'Recompute register':'Compute system payroll')}
+    </button>` : '';
+  const lockBtn = isLock && !state.locked ? `<button class="btn btn-primary" id="lockBtn" ${state.computed?'':'disabled'}>Lock cycle</button>` : '';
+
+  $('#stage').innerHTML = `
+    <p class="sec-label">Phase ${String(state.step).padStart(2,'0')}</p>
+    <h3>${title}</h3>
+    <p>${body}</p>
+    ${extra}
+    <div class="stage-actions">
+      <button class="btn btn-ghost" id="prevStep" ${state.step===1?'disabled':''}>Previous step</button>
+      <button class="btn btn-ghost" id="nextStep" ${state.step===14?'disabled':''}>Next step</button>
+      ${computeBtn}${lockBtn}
+    </div>`;
+
+  $('#prevStep').addEventListener('click',()=>{ if(state.step>1){state.step--;renderEngine();} });
+  $('#nextStep').addEventListener('click',()=>{
+    if(state.step===7 && !state.computed){ toast('Compute first','Phase 7 must produce a register before finance can review it.',true); return; }
+    if(state.step<14){ state.step++; renderEngine(); }
+  });
+  const cb = $('#computeBtn'); if(cb) cb.addEventListener('click', runCompute);
+  const lb = $('#lockBtn'); if(lb) lb.addEventListener('click', lockCycle);
+}
+
+function runCompute(){
+  if(state.computing) return;
+  state.computing = true; renderStage();
+  setTimeout(()=>{
+    state.computing = false; state.computed = true;
+    renderAll();
+    const t = totals(state.employees);
+    toast('Register computed', `${state.employees.length} records evaluated. Net payout for ${CYCLE.label} is ${money(t.net)}.`);
+  }, 1100);
+}
+
+function lockCycle(){
+  state.locked = true;
+  renderAll();
+  toast('Cycle locked', `${CYCLE.label} is archived and read-only. Reference ${hash('lock-'+CYCLE.label).slice(0,12).toUpperCase()}.`);
+}
+
+function renderRegister(){
+  const note = $('#registerNote');
+  if(!state.computed){
+    note.textContent = 'Awaiting computation';
+    $('#registerBody').innerHTML = `<tr class="empty-row"><td colspan="9">Run the calculation at phase 7 to populate the register.</td></tr>`;
+    return;
+  }
+  const list = scopedEmployees();
+  const t = totals(list);
+  note.textContent = state.locked ? 'Cycle locked · read-only' : `${list.length} records · net ${money(t.net)}`;
+  $('#registerBody').innerHTML = list.map(e=>{
+    const c = compute(e);
+    return `<tr>
+      <td class="name-cell">${e.name}<div style="font-size:11px;color:var(--muted);font-weight:400">${e.id}</div></td>
+      <td><span class="tag ${segClass(e.segment)}">${e.segment}</span></td>
+      <td class="num">${egp(e.basic)}</td>
+      <td class="num">${c.overtime?egp(c.overtime):'<span style="color:var(--muted-2)">—</span>'}</td>
+      <td class="num">${egp(c.bonuses)}</td>
+      <td class="num">${c.commission?egp(c.commission):'<span style="color:var(--muted-2)">—</span>'}</td>
+      <td class="num" style="color:var(--rose)">${egp(c.tax)}</td>
+      <td class="num" style="color:var(--rose)">${c.advances?egp(c.advances):'<span style="color:var(--muted-2)">—</span>'}</td>
+      <td class="num" style="color:var(--lime);font-weight:600">${egp(c.net)}</td>
+    </tr>`;
+  }).join('') + `<tr style="background:var(--panel-2)">
+      <td class="name-cell" style="font-weight:600">Cycle total</td><td></td>
+      <td class="num">${egp(list.reduce((s,e)=>s+e.basic,0))}</td>
+      <td class="num">${egp(t.overtime)}</td>
+      <td class="num">${egp(t.bonuses)}</td>
+      <td class="num">${egp(t.commission)}</td>
+      <td class="num" style="color:var(--rose)">${egp(t.tax)}</td>
+      <td class="num" style="color:var(--rose)">${egp(t.advances)}</td>
+      <td class="num" style="color:var(--lime);font-weight:700">${egp(t.net)}</td>
+    </tr>`;
+}
+
+function renderEngine(){ renderStepper(); renderStage(); renderRegister();
+  $('#engineStatus').textContent = state.locked ? 'Cycle locked' : state.computed ? 'Register computed' : 'Inputs open';
+}
+
+/* ============================================================
+   RENDER — EXPORTS
+   ============================================================ */
+function renderExports(){
+  const p = perms();
+  const ready = state.computed;
+  $('#exportLock').style.display = ready ? 'none' : 'flex';
+  const n = state.employees.length;
+  $('#wireMeta').textContent = `.txt · ${n} beneficiary records`;
+  $('#sheetMeta').textContent = `.xlsx · 5 segment sheets`;
+  $('#slipMeta').textContent = `.pdf · ${n} documents`;
+
+  $$('[data-export]').forEach(b=>{
+    b.disabled = !ready || !p.export;
+    b.title = !p.export ? 'Only the Finance Officer can release bank files' : (!ready ? 'Compute the register first' : '');
+  });
+
+  if(!state.exports.length){
+    $('#exportLog').innerHTML = `<tr class="empty-row"><td colspan="5">No exports generated in this cycle yet.</td></tr>`;
+  } else {
+    $('#exportLog').innerHTML = state.exports.map(x=>`<tr>
+      <td class="id-cell">${x.at}</td><td>${x.name}</td><td class="num">${x.records}</td><td>${x.by}</td>
+      <td style="font-family:var(--mono);font-size:10.5px;color:var(--lime);word-break:break-all">${x.hash}</td>
+    </tr>`).join('');
+  }
+}
+
+const EXPORT_DEFS = {
+  wire:{ name:'Bank wire transfer file (.txt)', detail:'Fixed-width payment instructions queued for the corporate bank portal.' },
+  sheet:{ name:'Master payroll spreadsheet (.xlsx)', detail:'Cross-tab summary by segment and site prepared for finance reconciliation.' },
+  slips:{ name:'Employee payslip batch (.pdf)', detail:'Individually addressed payslips prepared for distribution.' }
+};
+
+function doExport(kind){
+  const def = EXPORT_DEFS[kind];
+  const t = totals(state.employees);
+  const stamp = new Date().toLocaleString('en-GB',{hour12:false});
+  const h = hash(kind + stamp + t.net);
+  state.exports.unshift({ at:stamp, name:def.name, records:state.employees.length, by:roleLabel(state.role), hash:h });
+  renderExports();
+  toast(def.name.split(' (')[0]+' ready', `${def.detail} Total value ${money(t.net)} across ${state.employees.length} records.`, false, h);
+}
+
+const roleLabel = r=>({hr:'HR Officer',manager:'Branch Manager',finance:'Finance Officer',employee:'Employee'}[r]);
+
+/* ============================================================
+   FLYOUT + PAYSLIP
+   ============================================================ */
+function openFlyout(id){
+  const e = findEmp(id); if(!e) return;
+  const c = compute(e);
+  const p = perms();
+
+  $('#flyEyebrow').textContent = `${e.id} · ${e.role}`;
+  $('#flyName').textContent = e.name;
+
+  const formulaText = {
+    Manufacturing:'Net = Basic + (OT × hourly × 1.5) + attendance bonus 250 + performance bonus 350 − 12% tax & insurance − advances',
+    Sales:'Net = Basic + (5% × branch revenue) + performance bonus 300 + (OT × hourly × 1.5) − 12% tax & insurance − advances',
+    Administrative:'Net = Basic + (OT × hourly × 1.5) + attendance bonus 200 − 10% tax & insurance',
+    Manager:'Net = Basic + management bonus 1 500 + company performance bonus 2 000 − 15% tax & insurance. No overtime.',
+    Executive:'Net = Basic + executive bonus 5 000 − 20% tax & insurance. No overtime, no commission.'
+  }[e.segment];
+
+  const bankLine = p.seeBank ? e.bank : `•••• •••• ${e.bank.slice(-4)}`;
+
+  const lines = [
+    ['Basic salary', e.basic, false],
+    ...(c.otEligible ? [[`Overtime — ${c.otHours}h at ${money(c.hourly*OT_MULT)}/h`, c.overtime, false]] : []),
+    ...(c.commission ? [[`Sales commission — 5% of ${egp(e.kpiRevenue)} EGP revenue`, c.commission, false]] : []),
+    ...c.bonusParts.map(([k,v])=>[k, v, false]),
+    [`Tax & insurance — ${(c.taxRate*100).toFixed(0)}% of basic`, c.tax, true],
+    ...(c.advances ? [['Salary advances & loans', c.advances, true]] : [])
+  ];
+
+  $('#flyBody').innerHTML = `
+    <dl class="kv">
+      <dt>Segment</dt><dd><span class="tag ${segClass(e.segment)}">${e.segment}</span></dd>
+      <dt>Site</dt><dd>${e.branch}</dd>
+      <dt>Basic salary</dt><dd>${money(e.basic)}</dd>
+      <dt>Hourly rate</dt><dd>${money(c.hourly)}</dd>
+      <dt>Overtime status</dt><dd>${c.otEligible?`Eligible · ${c.otHours}h approved`:'Not eligible'}</dd>
+      <dt>Bank account</dt><dd style="font-family:var(--mono);font-size:11.5px">${bankLine}</dd>
+    </dl>
+
+    <p class="sec-label">Segment formula</p>
+    <div class="formula">${formulaText}</div>
+
+    <p class="sec-label">Compensation breakdown</p>
+    <div>
+      ${lines.map(([k,v,minus])=>`<div class="calc-line ${minus?'minus':''}"><span>${k}</span><span>${minus?'−':''}${egp(v)}</span></div>`).join('')}
+      <div class="calc-line total"><span>Net salary</span><span>${money(c.net)}</span></div>
+    </div>
+
+    <button class="btn btn-primary" id="slipBtn" style="width:100%;margin-top:18px">View payslip</button>`;
+
+  $('#slipBtn').addEventListener('click',()=>openPayslip(e.id));
+  $('#flyout').classList.add('on');
+  $('#scrim').classList.add('on');
+  $('#flyClose').focus();
+}
+function closeFlyout(){ $('#flyout').classList.remove('on'); if(!anyModalOpen()) $('#scrim').classList.remove('on'); }
+
+function openPayslip(id){
+  const e = findEmp(id), c = compute(e);
+  const ref = hash(e.id+CYCLE.label).slice(0,16).toUpperCase();
+  $('#slipBody').innerHTML = `
+    <div class="slip">
+      <div class="slip-head">
+        <div>
+          <h4>${e.name}</h4>
+          <p>${e.role} · ${e.branch}</p>
+          <p>${e.id} · ${e.segment}</p>
+        </div>
+        <div class="slip-ref">
+          Sheba Garments<br>${CYCLE.label} cycle<br>Ref ${ref}
+        </div>
+      </div>
+      <div class="calc-line"><span>Basic salary</span><span>${egp(e.basic)}</span></div>
+      ${c.overtime?`<div class="calc-line"><span>Overtime (${c.otHours}h × 1.5)</span><span>${egp(c.overtime)}</span></div>`:''}
+      ${c.commission?`<div class="calc-line"><span>Sales commission</span><span>${egp(c.commission)}</span></div>`:''}
+      ${c.bonusParts.map(([k,v])=>`<div class="calc-line"><span>${k}</span><span>${egp(v)}</span></div>`).join('')}
+      <div class="calc-line"><span style="color:var(--ivory);font-weight:600">Gross earnings</span><span style="font-weight:600">${egp(c.gross)}</span></div>
+      <div class="calc-line minus"><span>Tax &amp; insurance (${(c.taxRate*100).toFixed(0)}%)</span><span>−${egp(c.tax)}</span></div>
+      ${c.advances?`<div class="calc-line minus"><span>Advances &amp; loans</span><span>−${egp(c.advances)}</span></div>`:''}
+      <div class="calc-line total"><span>Net payable</span><span>${money(c.net)}</span></div>
+      <p style="font-size:11px;color:var(--muted);margin-top:14px;line-height:1.6">Credited to account ending ${e.bank.slice(-4)} on the ${CYCLE.processingDate} transfer run.</p>
+    </div>`;
+  openModal('slipModal');
+}
+
+/* ============================================================
+   MODALS
+   ============================================================ */
+function openModal(id){ $('#'+id).classList.add('on'); $('#scrim').classList.add('on'); }
+function closeModal(id){ $('#'+id).classList.remove('on'); if(!anyModalOpen() && !$('#flyout').classList.contains('on')) $('#scrim').classList.remove('on'); }
+function anyModalOpen(){ return $$('.modal.on').length>0; }
+
+function validateAndSave(){
+  const fields = [
+    ['f-name','e-name','Enter the employee\u2019s full name'],
+    ['f-type','e-type','Choose a segment'],
+    ['f-branch','e-branch','Choose a site'],
+    ['f-basic','e-basic','Enter a basic salary above zero'],
+    ['f-bank','e-bank','Enter a bank account number'],
+    ['f-role','e-role','Enter a position title']
+  ];
+  let ok = true;
+  fields.forEach(([f,er,msg])=>{
+    const v = $('#'+f).value.trim();
+    const bad = !v || (f==='f-basic' && (+v<=0 || isNaN(+v)));
+    $('#'+er).textContent = bad ? msg : '';
+    if(bad) ok=false;
+  });
+  if(!ok) return;
+
+  const n = state.employees.length+1;
+  state.employees.push({
+    id:'SHB-'+String(n).padStart(3,'0'),
+    name:$('#f-name').value.trim(),
+    role:$('#f-role').value.trim(),
+    segment:$('#f-type').value,
+    branch:$('#f-branch').value,
+    basic:+$('#f-basic').value,
+    bank:$('#f-bank').value.trim(),
+    otHours:0, advances:0, kpiRevenue:0, bonusExtra:0
+  });
+  ['f-name','f-role','f-basic','f-bank'].forEach(f=>$('#'+f).value='');
+  $('#f-type').value=''; $('#f-branch').value='';
+  closeModal('addModal');
+  renderAll();
+  toast('Record created',`SHB-${String(n).padStart(3,'0')} added to the employee master file and included in the ${CYCLE.label} cycle.`);
+}
+
+/* ============================================================
+   TOASTS
+   ============================================================ */
+function toast(title, body, bad, hashText){
+  const el = document.createElement('div');
+  el.className = 'toast'+(bad?' bad':'');
+  el.innerHTML = `<h5>${escapeHtml(title)}</h5><p>${escapeHtml(body)}</p>${hashText?`<code>SHA · ${hashText}</code>`:''}`;
+  $('#toasts').appendChild(el);
+  setTimeout(()=>{ el.style.transition='opacity .3s,transform .3s'; el.style.opacity='0'; el.style.transform='translateX(20px)'; setTimeout(()=>el.remove(),320); }, hashText?6500:4200);
+}
+
+/* ============================================================
+   MAP
+   ============================================================ */
+let map=null, markers={}, mapMode=null;
+
+function siteStatus(site){
+  const list = state.employees.filter(e=>e.branch===site.name);
+  const cost = totals(list).net;
+  const pct = site.budget ? cost/site.budget*100 : 0;
+  const color = pct>100 ? '#e0685f' : pct>92 ? '#e8b13a' : '#bfd52b';
+  return { list, cost, pct, color };
+}
+
+function initMap(){
+  if(mapMode) return;
+  const leafletReady = typeof L!=='undefined' && typeof L.map==='function';
+  if(leafletReady){
+    try{ buildLeaflet(); mapMode='leaflet'; }
+    catch(err){ console.warn('Leaflet failed, using schematic view:', err); buildFallback(); mapMode='fallback'; }
+  } else {
+    buildFallback(); mapMode='fallback';
+  }
+  $('#mapLoading').classList.add('off');
+}
+
+function buildLeaflet(){
+  map = L.map('leafletMap',{ zoomControl:true, attributionControl:true }).setView([30.65,30.65],7);
+  const tiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+    maxZoom:18, attribution:'&copy; OpenStreetMap &copy; CARTO'
+  });
+  // If tiles never arrive, drop to the schematic view rather than showing a blank canvas.
+  let tileOk = false;
+  tiles.on('tileload', ()=>{ tileOk = true; });
+  tiles.on('tileerror', ()=>{ if(!tileOk) demoteToFallback(); });
+  setTimeout(()=>{ if(!tileOk) demoteToFallback(); }, 4000);
+  tiles.addTo(map);
+
+  SITES.forEach(site=>{
+    const s = siteStatus(site);
+    const m = L.circleMarker([site.lat,site.lng],{ radius:10, color:s.color, weight:2, fillColor:s.color, fillOpacity:.4 }).addTo(map);
+    m.bindPopup(popupHtml(site));
+    m.on('click',()=>setBranch(state.branchFilter===site.name?'':site.name));
+    markers[site.name]=m;
+  });
+}
+
+function demoteToFallback(){
+  if(mapMode==='fallback') return;
+  mapMode='fallback';
+  if(map){ map.remove(); map=null; markers={}; }
+  $('#leafletMap').style.display='none';
+  buildFallback();
+}
+
+function popupHtml(site){
+  const s = siteStatus(site);
+  return `<b>${site.name}</b><br>${site.city}<br>${s.list.length} employees · ${egp(s.cost)} EGP net<em>${s.pct.toFixed(0)}% of budget · click to filter</em>`;
+}
+
+/* --- schematic projection over northern Egypt (lng 29.5–32, lat 29.8–31.4) --- */
+const PROJ = { lng0:29.5, lng1:32.0, lat0:29.8, lat1:31.4, x:40, y:34, w:400, h:232 };
+function project(lat,lng){
+  return {
+    x: PROJ.x + ((lng-PROJ.lng0)/(PROJ.lng1-PROJ.lng0))*PROJ.w,
+    y: PROJ.y + ((PROJ.lat1-lat)/(PROJ.lat1-PROJ.lat0))*PROJ.h
+  };
+}
+
+function buildFallback(){
+  $('#mapFallback').classList.add('on');
+  drawFallback();
+}
+
+function drawFallback(){
+  const svg = $('#fallbackSvg'); if(!svg) return;
+  const cairo = project(30.07,31.27);
+
+  const base = `
+    <defs>
+      <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#6fb3c9" stop-opacity=".18"/>
+        <stop offset="100%" stop-color="#6fb3c9" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="480" height="300" fill="none"/>
+    <path d="M0 0 H480 V64 C380 52 300 74 214 66 C140 59 70 76 0 68 Z" fill="url(#sea)"/>
+    <path d="M0 68 C70 76 140 59 214 66 C300 74 380 52 480 64" fill="none" stroke="#6fb3c9" stroke-opacity=".45" stroke-width="1.2"/>
+    <text x="18" y="30" font-family="IBM Plex Mono, monospace" font-size="9" fill="#6fb3c9" fill-opacity=".65" letter-spacing="1.5">MEDITERRANEAN</text>
+    <path d="M${cairo.x} ${cairo.y} L150 70 L360 62 Z" fill="#bfd52b" fill-opacity=".05" stroke="#bfd52b" stroke-opacity=".16" stroke-width="1"/>
+    <path d="M${cairo.x} ${cairo.y} C${cairo.x-6} ${cairo.y+30} ${cairo.x-14} ${cairo.y+44} ${cairo.x-22} ${cairo.y+62}" fill="none" stroke="#6fb3c9" stroke-opacity=".3" stroke-width="1.4"/>
+    <text x="${cairo.x-30}" y="${cairo.y+76}" font-family="IBM Plex Mono, monospace" font-size="8.5" fill="#6fb3c9" fill-opacity=".5" letter-spacing="1">NILE</text>`;
+
+  const pins = SITES.map((site,i)=>{
+    const p = project(site.lat, site.lng);
+    const s = siteStatus(site);
+    const active = !state.branchFilter || state.branchFilter===site.name;
+    const op = active ? 1 : .28;
+    const r  = (state.branchFilter===site.name) ? 8 : 6;
+    // Zamalek and Heliopolis sit close together — alternate label side.
+    const left = i%2===1;
+    const tx = left ? p.x-11 : p.x+11;
+    const anchor = left ? 'end' : 'start';
+    return `<g class="pin ${state.branchFilter===site.name?'sel':''}" data-site="${site.name}" opacity="${op}" tabindex="0" role="button" aria-label="${site.name}">
+      <circle class="halo" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r+9}" fill="${s.color}" fill-opacity=".14"/>
+      <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" fill="${s.color}" fill-opacity=".5" stroke="${s.color}" stroke-width="1.8"/>
+      <text x="${tx.toFixed(1)}" y="${(p.y-2).toFixed(1)}" text-anchor="${anchor}">${site.name}</text>
+      <text x="${tx.toFixed(1)}" y="${(p.y+9).toFixed(1)}" text-anchor="${anchor}" fill="${s.color}" fill-opacity=".85">${s.pct.toFixed(0)}% · ${s.list.length} staff</text>
+    </g>`;
+  }).join('');
+
+  svg.innerHTML = base + pins;
+
+  svg.querySelectorAll('.pin').forEach(g=>{
+    const act = ()=>setBranch(state.branchFilter===g.dataset.site ? '' : g.dataset.site);
+    g.addEventListener('click', act);
+    g.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); act(); } });
+  });
+}
+
+function refreshMarkers(){
+  if(mapMode==='fallback'){ drawFallback(); return; }
+  SITES.forEach(site=>{
+    const m = markers[site.name]; if(!m) return;
+    const s = siteStatus(site);
+    const active = !state.branchFilter || state.branchFilter===site.name;
+    m.setStyle({ color:s.color, fillColor:s.color, fillOpacity:active?.55:.12, opacity:active?1:.35, weight:active?3:1.5 });
+    m.setRadius(active && state.branchFilter ? 14 : 10);
+    m.setPopupContent(popupHtml(site));
+  });
+}
+
+function setBranch(name){
+  state.branchFilter = name;
+  const banner = $('#branchBanner');
+  if(name){ banner.classList.add('on'); $('#branchBannerName').textContent = name; }
+  else banner.classList.remove('on');
+  const sel = $('#empBranch'); if(sel) sel.value = name;
+  renderAll();
+  if(name) toast('Filtered to '+name,'Command center, directory, attendance ledger and payroll register now show this site only.');
+}
+
+/* ============================================================
+   NAV + WIRING
+   ============================================================ */
+function switchView(v){
+  state.view=v;
+  $$('.view').forEach(s=>s.classList.toggle('on', s.id==='view-'+v));
+  $$('.nav-item').forEach(b=>b.classList.toggle('on', b.dataset.view===v));
+  $('#sidebar').classList.remove('open');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function renderAll(){
+  renderKPIs(); renderFlow(); renderBranches(); renderInsights(); renderPrintLedger();
+  renderDirectory(); renderAttendance(); renderEngine(); renderExports();
+  $('#sideCount').textContent = `${state.employees.length} active`;
+  $('#sideStatus').textContent = state.locked ? 'Locked — archived' : state.computed ? 'Computed — under review' : 'Open — inputs editable';
+  $('#cycleChip').textContent = `${CYCLE.label} cycle · ${state.locked?'locked':state.computed?'computed':'open'}`;
+  refreshMarkers();
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  $$('.nav-item').forEach(b=>b.addEventListener('click',()=>switchView(b.dataset.view)));
+  $('#menuBtn').addEventListener('click',()=>$('#sidebar').classList.toggle('open'));
+
+  $('#roleSelect').addEventListener('change',e=>{
+    state.role=e.target.value;
+    renderAll();
+    const msg = {
+      hr:'Full record editing, attendance entry and approval rights. Bank details visible.',
+      manager:'Attendance verification and approval rights. Bank details masked.',
+      finance:'Register review, cycle approval and bank file release. Bank details visible.',
+      employee:'Read-only access to your own summary. Colleague pay and account numbers hidden.'
+    }[state.role];
+    toast('Signed in as '+roleLabel(state.role), msg);
+  });
+
+  $('#empSearch').addEventListener('input',e=>{ state.search=e.target.value; renderDirectory(); });
+  $('#empSegment').addEventListener('change',e=>{ state.segment=e.target.value; renderDirectory(); });
+  $('#empBranch').addEventListener('change',e=>setBranch(e.target.value));
+  $('#attFilter').addEventListener('change',e=>{ state.attFilter=e.target.value; renderAttendance(); });
+  $('#clearBranch').addEventListener('click',()=>setBranch(''));
+
+  $('#addEmpBtn').addEventListener('click',()=>openModal('addModal'));
+  $('#saveEmp').addEventListener('click',validateAndSave);
+  $$('[data-close-modal]').forEach(b=>b.addEventListener('click',()=>closeModal(b.dataset.closeModal)));
+
+  $('#flyClose').addEventListener('click',closeFlyout);
+  $('#scrim').addEventListener('click',()=>{ closeFlyout(); $$('.modal.on').forEach(m=>closeModal(m.id)); });
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){ closeFlyout(); $$('.modal.on').forEach(m=>closeModal(m.id)); $('#mapDrawer').classList.remove('on'); }
+  });
+
+  $$('[data-export]').forEach(b=>b.addEventListener('click',()=>doExport(b.dataset.export)));
+  $('#printCmd').addEventListener('click',()=>window.print());
+
+  const drawer = $('#mapDrawer');
+  const sizeMap = ()=>{ if(map){ map.invalidateSize(); map.setView([30.65,30.65],7); } refreshMarkers(); };
+
+  $('#mapFab').addEventListener('click',()=>{
+    drawer.classList.toggle('on');
+    if(!drawer.classList.contains('on')) return;
+    // Build once the drawer has real dimensions, then size again after the slide-in settles.
+    requestAnimationFrame(()=>{ initMap(); sizeMap(); });
+    setTimeout(sizeMap, 360);
+  });
+  drawer.addEventListener('transitionend', e=>{ if(e.propertyName==='transform' && drawer.classList.contains('on')) sizeMap(); });
+  window.addEventListener('resize',()=>{ if(drawer.classList.contains('on')) sizeMap(); });
+  $('#mapClose').addEventListener('click',()=>drawer.classList.remove('on'));
+
+  renderAll();
+});
+</script>
+</body>
+</html>
